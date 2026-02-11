@@ -10,9 +10,9 @@ class IntelligenceExtractor:
     """Extract intelligence from scammer messages"""
     
     # Regex patterns for extraction
-    BANK_ACCOUNT_PATTERN = re.compile(r'\b\d{11,18}\b')
+    BANK_ACCOUNT_PATTERN =  re.compile(r'(?i)(?:acc(?:ount)?|a/c|no\.?|savings)\s*:?\s*(\d{11,18})')
     UPI_ID_PATTERN = re.compile(r'\b[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\b')
-    PHONE_PATTERN = re.compile(r'\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}')
+    PHONE_PATTERN = re.compile(r'(?:\+91|91|0)?[6-9]\d{9}\b|\b[6-9]\d{9}\b')
     URL_PATTERN = re.compile(r'https?://[^\s]+|www\.[^\s]+')
     
     # Suspicious keywords to track
