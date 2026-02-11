@@ -139,7 +139,7 @@ def main():
     
     # Test health first
     if not test_health():
-        print("\n[WARNING] API is not healthy. Make sure the server is running.")
+        print("\n⚠ API is not healthy. Make sure the server is running.")
         print("   Run: uvicorn app.main:app --reload")
         return
     
