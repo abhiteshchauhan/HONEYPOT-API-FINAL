@@ -99,7 +99,7 @@ class IntelligenceExtractor:
         """
         return self.extracted
     
-    def has_significant_intelligence(self, min_items: int = 2) -> bool:
+    def has_significant_intelligence(self, min_items: int = 3) -> bool:
         """
         Check if significant intelligence has been extracted
         

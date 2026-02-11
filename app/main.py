@@ -244,7 +244,8 @@ async def chat(
         # Return response
         return MessageResponse(
             status="success",
-            reply=response_text
+            reply=response_text,
+            message_count=session.messageCount
         )
     
     except Exception as e:
