@@ -9,11 +9,21 @@ from app.models import ExtractedIntelligence, Message
 class IntelligenceExtractor:
     """Extract intelligence from scammer messages"""
     
-    # Regex patterns for extraction
-    BANK_ACCOUNT_PATTERN =  re.compile(r'(?i)(?:acc(?:ount)?|a/c|no\.?|savings)\s*:?\s*(\d{11,18})')
+
+    # 1. URL: Supports http, https, and www
+    URL_PATTERN = re.compile(r'\b(?:https?://\S+|www\.\S+)\b', re.IGNORECASE)
+
+    # 2. UPI: Stays the same
     UPI_ID_PATTERN = re.compile(r'\b[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\b')
-    PHONE_PATTERN = re.compile(r'(?:\+91|91|0)?[6-9]\d{9}\b|\b[6-9]\d{9}\b')
-    URL_PATTERN = re.compile(r'https?://[^\s]+|www\.[^\s]+')
+
+    # 3. GLOBAL PHONE: 
+    # This catches +11..., +91..., and standalone numbers 7-15 digits long.
+    # We remove the [6-9] restriction to allow numbers starting with 2, 3, etc.
+    PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}\s?|0)?\d{7,10}\b')
+
+    # 4. BANK ACCOUNT: 
+    # 11-18 digits. We rely on length and context in the logic to separate this from phones.
+    BANK_ACCOUNT_PATTERN = re.compile(r'\b\d{11,18}\b')
     
     # Suspicious keywords to track
     SUSPICIOUS_KEYWORDS = {
@@ -49,11 +59,13 @@ class IntelligenceExtractor:
         text_lower = text.lower()
         
         # Extract bank accounts
-        bank_accounts = self.BANK_ACCOUNT_PATTERN.findall(text)
-        for account in bank_accounts:
+        bank_accounts = self.BANK_ACCOUNT_PATTERN.finditer(text)
+        account_spans = []
+        for match in bank_accounts:
+            account = match.group()
+            account_spans.append(match.span()) # Save location to prevent phone overlap
             if account not in self.extracted.bankAccounts:
                 self.extracted.bankAccounts.append(account)
-        
         # Extract UPI IDs
         upi_ids = self.UPI_ID_PATTERN.findall(text)
         for upi_id in upi_ids:
@@ -61,12 +73,19 @@ class IntelligenceExtractor:
                 self.extracted.upiIds.append(upi_id)
         
         # Extract phone numbers
-        phones = self.PHONE_PATTERN.findall(text)
-        for phone in phones:
-            # Clean up phone number
-            clean_phone = re.sub(r'[-.\s()]', '', phone)
-            if len(clean_phone) >= 10 and clean_phone not in self.extracted.phoneNumbers:
-                self.extracted.phoneNumbers.append(phone.strip())
+        phones = self.PHONE_PATTERN.finditer(text)
+        for match in phones:
+            phone = match.group()
+            span = match.span()
+            
+            # Check if this phone match is actually inside a bank account span
+            is_part_of_account = any(span[0] >= s[0] and span[1] <= s[1] for s in account_spans)
+            
+            if not is_part_of_account:
+                clean_phone = re.sub(r'[-.\s()]', '', phone)
+                # Ensure it meets length requirements after cleaning
+                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
+                    self.extracted.phoneNumbers.append(phone.strip())
         
         # Extract URLs
         urls = self.URL_PATTERN.findall(text)
