@@ -23,7 +23,7 @@ class IntelligenceExtractor:
 
     # 4. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
-    BANK_ACCOUNT_PATTERN = re.compile(r'\b\d{11,18}\b')
+    BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\d{11,18}(?!\d)')
     
     # Suspicious keywords to track
     SUSPICIOUS_KEYWORDS = {
@@ -73,19 +73,12 @@ class IntelligenceExtractor:
                 self.extracted.upiIds.append(upi_id)
         
         # Extract phone numbers
-        phones = self.PHONE_PATTERN.finditer(text)
-        for match in phones:
-            phone = match.group()
-            span = match.span()
-            
-            # Check if this phone match is actually inside a bank account span
-            is_part_of_account = any(span[0] >= s[0] and span[1] <= s[1] for s in account_spans)
-            
-            if not is_part_of_account:
-                clean_phone = re.sub(r'[-.\s()]', '', phone)
-                # Ensure it meets length requirements after cleaning
-                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
-                    self.extracted.phoneNumbers.append(phone.strip())
+        phones = self.PHONE_PATTERN.findall(text)
+        for phone in phones:
+            # Clean up phone number
+            clean_phone = re.sub(r'[-.\s()]', '', phone)
+            if len(clean_phone) >= 10 and clean_phone not in self.extracted.phoneNumbers:
+                self.extracted.phoneNumbers.append(phone.strip())
         
         # Extract URLs
         urls = self.URL_PATTERN.findall(text)
