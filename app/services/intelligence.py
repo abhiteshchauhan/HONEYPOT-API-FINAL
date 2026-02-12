@@ -19,7 +19,7 @@ class IntelligenceExtractor:
     # 3. GLOBAL PHONE: 
     # This catches +11..., +91..., and standalone numbers 7-15 digits long.
     # We remove the [6-9] restriction to allow numbers starting with 2, 3, etc.
-    PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}\s?|0)?\d{7,10}\b')
+    PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}\s?|0)?\d{7,10}(?!\d)')
 
     # 4. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
@@ -73,13 +73,19 @@ class IntelligenceExtractor:
                 self.extracted.upiIds.append(upi_id)
         
         # Extract phone numbers
-        phones = self.PHONE_PATTERN.findall(text)
-        for phone in phones:
-            # Clean up phone number
-            clean_phone = re.sub(r'[-.\s()]', '', phone)
-            if len(clean_phone) >= 10 and clean_phone not in self.extracted.phoneNumbers:
-                self.extracted.phoneNumbers.append(phone.strip())
-        
+        phone_matches = self.PHONE_PATTERN.finditer(text)
+        for match in phone_matches:
+            phone = match.group()
+            phone_span = match.span()
+            
+            # Check if this phone match is actually just a part of a bank account
+            is_sub_match = any(phone_span[0] >= s[0] and phone_span[1] <= s[1] for s in account_spans)
+            
+            if not is_sub_match:
+                clean_phone = re.sub(r'[-.\s()]', '', phone)
+                # Keep original format for list, or use clean_phone
+                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
+                    self.extracted.phoneNumbers.append(phone.strip())
         # Extract URLs
         urls = self.URL_PATTERN.findall(text)
         for url in urls:
