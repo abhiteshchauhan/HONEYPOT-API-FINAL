@@ -145,43 +145,49 @@ class AIAgent:
         
         return response, notes
     
-    def _generate_notes(self, message: Message, categories: List[str]) -> str:
-        """
-        Generate notes about scammer behavior
+   async def generate_context_aware_response(
+    self,
+    current_message: Message,
+    conversation_history: List[Message],
+    scam_categories: List[str]
+) -> tuple[str, str]:
+    
+    # 1. Generate the actual reply to the scammer
+    response = await self.generate_response(current_message, conversation_history)
+    
+    # 2. Generate the dynamic AI notes (Not hardcoded)
+    # We pass the categories and message to a dynamic prompt
+    notes = await self._generate_ai_notes(current_message, scam_categories)
+    
+    return response, notes
+
+async def _generate_ai_notes(self, message: Message, categories: List[str]) -> str:
+    """
+    Asks the AI to write a unique summary from scratch.
+    """
+    # We define the categories in simple terms for the AI
+    cats_str = ", ".join(categories) if categories else "general suspicious behavior"
+    
+    # This is the "Constraint Prompt" that prevents the 2,000-word problem
+    prompt = (
+        f"Analyze this scam message: '{message.text}'\n"
+        f"Detected flags: {cats_str}\n"
+        "Write a summary for a security agent. Explain the scammer's "
+        "strategy and goal in simple, daily-life language. "
+        "CRITICAL: Your total response must be between 200 and 250 words. "
+        "Do not use technical jargon. Wrap up with a clear next step."
+    )
+
+    # Call your AI model here (Example: self.model.generate)
+    # We use a 'max_tokens' limit as a hardware safety net
+    ai_generated_summary = await self.llm_client.generate(
+        prompt, 
+        max_tokens=350  # 350 tokens is roughly 250-270 words
+    )
+    
+    # Final safety check to trim if the AI ignores the prompt instruction
+    words = ai_generated_summary.split()
+    if len(words) > 250:
+        return " ".join(words[:245]) + "... [Truncated to meet 250-word limit]"
         
-        Args:
-            message: Current message
-            categories: Detected scam categories
-            
-        Returns:
-            Notes string
-        """
-        notes_parts = []
-        
-        if "urgency" in categories:
-            notes_parts.append("Used urgency tactics")
-        
-        if "threat" in categories:
-            notes_parts.append("Employed threats")
-        
-        if "banking" in categories:
-            notes_parts.append("Banking/financial scam")
-        
-        if "phishing_link" in categories:
-            notes_parts.append("Shared suspicious links")
-        
-        if "reward" in categories:
-            notes_parts.append("Prize/reward scam")
-        
-        if "verification" in categories:
-            notes_parts.append("Verification/authentication attempt")
-        
-        if "sensitive_info_request" in categories:
-            notes_parts.append("Requested sensitive information")
-        
-        # Add general note about message content
-        message_lower = message.text.lower()
-        if any(word in message_lower for word in ["otp", "pin", "cvv", "password"]):
-            notes_parts.append("Asked for credentials")
-        
-        return "; ".join(notes_parts) if notes_parts else "Scam attempt detected"
+    return ai_generated_summary

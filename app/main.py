@@ -112,7 +112,8 @@ async def root():
         "status": "operational",
         "endpoints": {
             "chat": "/chat (POST)",
-            "health": "/health (GET)"
+            "health": "/health (GET)",
+            "results": "/results/{sessionId} (GET)"
         }
     }
 
@@ -133,6 +134,57 @@ async def health_check():
         "redis": "connected" if redis_ok else "disconnected",
         "timestamp": int(time.time() * 1000)
     }
+
+
+@app.get("/results/{session_id}")
+async def get_final_results(
+    session_id: str,
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    Get the final result payload for a specific session
+    
+    This endpoint returns the complete intelligence and conversation data
+    for a given session in the same format as the callback payload.
+    """
+    try:
+        # Get session data
+        session = await active_session_manager.get_session(session_id)
+        
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session {session_id} not found"
+            )
+        
+        # Build the final result payload
+        from app.models import FinalResultPayload
+        payload = FinalResultPayload(
+            sessionId=session.sessionId,
+            scamDetected=session.scamDetected,
+            totalMessagesExchanged=session.messageCount,
+            extractedIntelligence=session.extractedIntelligence,
+            agentNotes=session.agentNotes or "Session data retrieved"
+        )
+        
+        return {
+            "status": "success",
+            "data": payload.model_dump(),
+            "callbackSent": session.callbackSent,
+            "conversationHistory": [msg.model_dump() for msg in session.conversationHistory]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error retrieving results for session {session_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving session results: {str(e)}"
+        )
 
 
 @app.post("/chat", response_model=MessageResponse)
