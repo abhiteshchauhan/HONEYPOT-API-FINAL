@@ -158,8 +158,7 @@ async def chat(
         
         # Get or create session
         session = await active_session_manager.get_session(request.sessionId)
-        if session and session.callbackSent:
-         return None # Conversation terminated
+        
 
         if not session:
             session = await active_session_manager.create_session(request.sessionId)
