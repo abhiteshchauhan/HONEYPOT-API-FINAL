@@ -4,11 +4,12 @@ Intelligence extraction from scammer conversations
 import re
 from typing import List, Set
 from app.models import ExtractedIntelligence, Message
-from app.services.filter import is_scammer_data
+
 
 class IntelligenceExtractor:
     """Extract intelligence from scammer messages"""
     
+
     # 1. URL: Supports http, https, and www
     URL_PATTERN = re.compile(r'\b(?:https?://\S+|www\.\S+)\b', re.IGNORECASE)
 
@@ -16,9 +17,12 @@ class IntelligenceExtractor:
     UPI_ID_PATTERN = re.compile(r'\b[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\b')
 
     # 3. GLOBAL PHONE: 
+    # This catches +11..., +91..., and standalone numbers 7-15 digits long.
+    # We remove the [6-9] restriction to allow numbers starting with 2, 3, etc.
     PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}\s?|0)?\d{7,10}(?!\d)')
 
     # 4. BANK ACCOUNT: 
+    # 11-18 digits. We rely on length and context in the logic to separate this from phones.
     BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\d{11,18}(?!\d)')
     
     # Suspicious keywords to track
@@ -44,48 +48,49 @@ class IntelligenceExtractor:
     
     def __init__(self):
         self.extracted: ExtractedIntelligence = ExtractedIntelligence()
-
-
     
-    async def extract_from_text(self, text: str) -> None:
+    def extract_from_text(self, text: str) -> None:
+        """
+        Extract intelligence from a single text message
+        
+        Args:
+            text: Message text to analyze
+        """
         text_lower = text.lower()
         
+        # Extract bank accounts
         bank_accounts = self.BANK_ACCOUNT_PATTERN.finditer(text)
         account_spans = []
         for match in bank_accounts:
             account = match.group()
-            account_spans.append(match.span())
-            if await is_scammer_data(text, account, "bank account"):
-                if account not in self.extracted.bankAccounts:
-                    self.extracted.bankAccounts.append(account)
-                    
-        upi_ids = self.UPI_ID_PATTERN.finditer(text)
-        for match in upi_ids:
-            upi_id = match.group()
-            if '@' in upi_id:
-                if await is_scammer_data(text, upi_id, "UPI ID"):
-                    if upi_id not in self.extracted.upiIds:
-                        self.extracted.upiIds.append(upi_id)
+            account_spans.append(match.span()) # Save location to prevent phone overlap
+            if account not in self.extracted.bankAccounts:
+                self.extracted.bankAccounts.append(account)
+        # Extract UPI IDs
+        upi_ids = self.UPI_ID_PATTERN.findall(text)
+        for upi_id in upi_ids:
+            if '@' in upi_id and upi_id not in self.extracted.upiIds:
+                self.extracted.upiIds.append(upi_id)
         
+        # Extract phone numbers
         phone_matches = self.PHONE_PATTERN.finditer(text)
         for match in phone_matches:
             phone = match.group()
             phone_span = match.span()
             
+            # Check if this phone match is actually just a part of a bank account
             is_sub_match = any(phone_span[0] >= s[0] and phone_span[1] <= s[1] for s in account_spans)
             
             if not is_sub_match:
-                if await is_scammer_data(text, phone, "phone number"):
-                    clean_phone = re.sub(r'[-.\s()]', '', phone)
-                    if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
-                        self.extracted.phoneNumbers.append(phone.strip())
-                        
-        urls = self.URL_PATTERN.finditer(text)
-        for match in urls:
-            url = match.group()
-            if await is_scammer_data(text, url, "URL"):
-                if url not in self.extracted.phishingLinks:
-                    self.extracted.phishingLinks.append(url)
+                clean_phone = re.sub(r'[-.\s()]', '', phone)
+                # Keep original format for list, or use clean_phone
+                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
+                    self.extracted.phoneNumbers.append(phone.strip())
+        # Extract URLs
+        urls = self.URL_PATTERN.findall(text)
+        for url in urls:
+            if url not in self.extracted.phishingLinks:
+                self.extracted.phishingLinks.append(url)
         
         # Extract suspicious keywords
         for keyword in self.SUSPICIOUS_KEYWORDS:
@@ -93,9 +98,12 @@ class IntelligenceExtractor:
                 if keyword not in self.extracted.suspiciousKeywords:
                     self.extracted.suspiciousKeywords.append(keyword)
     
-    async def extract_from_messages(self, messages: List[Message]) -> None:
+    def extract_from_messages(self, messages: List[Message]) -> None:
         """
         Extract intelligence from a list of messages
+        
+        Args:
+            messages: List of messages to analyze
         """
         for message in messages:
             self.extract_from_text(message.text)
@@ -103,12 +111,21 @@ class IntelligenceExtractor:
     def get_extracted_intelligence(self) -> ExtractedIntelligence:
         """
         Get all extracted intelligence
+        
+        Returns:
+            ExtractedIntelligence object with all extracted data
         """
         return self.extracted
     
     def has_significant_intelligence(self, min_items: int = 3) -> bool:
         """
         Check if significant intelligence has been extracted
+        
+        Args:
+            min_items: Minimum number of intelligence items to consider significant
+            
+        Returns:
+            True if significant intelligence extracted
         """
         total_items = (
             len(self.extracted.bankAccounts) +
@@ -121,6 +138,9 @@ class IntelligenceExtractor:
     def get_intelligence_summary(self) -> str:
         """
         Get a summary of extracted intelligence
+        
+        Returns:
+            Human-readable summary string
         """
         items = []
         
@@ -141,6 +161,9 @@ class IntelligenceExtractor:
     def merge_intelligence(self, other: ExtractedIntelligence) -> None:
         """
         Merge intelligence from another ExtractedIntelligence object
+        
+        Args:
+            other: Another ExtractedIntelligence to merge
         """
         # Merge bank accounts
         for account in other.bankAccounts:
