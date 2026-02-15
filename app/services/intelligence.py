@@ -19,8 +19,7 @@ class IntelligenceExtractor:
     # 3. GLOBAL PHONE: 
     # This catches +11..., +91..., and standalone numbers 7-15 digits long.
     # We remove the [6-9] restriction to allow numbers starting with 2, 3, etc.
-    PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}\s?|0)?\d{7,10}(?!\d)')
-
+    PHONE_PATTERN = re.compile(r'\b(?:\+\d{1,3})?[-\s\.]?\d{7,10}(?!\d)')
     # 4. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
     BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\d{11,18}(?!\d)')
