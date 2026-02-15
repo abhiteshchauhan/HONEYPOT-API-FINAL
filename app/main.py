@@ -129,15 +129,6 @@ async def chat(
         agent = get_ai_agent()
         
         session = await active_session_manager.get_session(request.sessionId)
-        
-        # 1. HARD STOP: Check if callback was already sent
-        if session and session.callbackSent:
-            return MessageResponse(
-                status="completed",
-                reply="I'm busy right now, let's talk later.",
-                message_count=session.messageCount
-            )
-        
         if not session:
             session = await active_session_manager.create_session(request.sessionId)
         
@@ -161,25 +152,7 @@ async def chat(
         
         intelligence = extractor.get_extracted_intelligence()
         
-        # 2. Update session FIRST to check callback criteria with current message
-        session = await active_session_manager.update_session(
-            session_id=request.sessionId,
-            new_message=request.message,
-            scam_detected=detection_result.is_scam,
-            intelligence=intelligence,
-            notes=""
-        )
-        
-        # 3. Check callback trigger
-        should_callback = False
         if detection_result.is_scam:
-            should_callback = await active_session_manager.should_send_callback(request.sessionId)
-        
-        # 4. Generate appropriate response
-        if should_callback:
-            response_text = "Wait, my phone is dying. I'll check this and get back to you later today."
-            notes = "SESSION TERMINATED"
-        elif detection_result.is_scam:
             response_text, agent_notes = await agent.generate_context_aware_response(
                 request.message,
                 request.conversationHistory,
@@ -190,27 +163,29 @@ async def chat(
             response_text = "I'm not sure what this is about. Can you clarify?"
             notes = "No scam detected"
         
-        if notes:
-            if session.agentNotes:
-                session.agentNotes += f"\n{notes}"
-            else:
-                session.agentNotes = notes
-        
         user_response = Message(
             sender="user",
             text=response_text,
             timestamp=int(time.time() * 1000)
         )
         
-        # 5. Append user message and sync exact message count before saving
+        session = await active_session_manager.update_session(
+            session_id=request.sessionId,
+            new_message=request.message,
+            scam_detected=detection_result.is_scam,
+            intelligence=intelligence,
+            notes=notes
+        )
+        
         session.conversationHistory.append(user_response)
-        session.messageCount = len(session.conversationHistory)
         await active_session_manager.save_session(session)
         
-        # 6. Fire background task with fully synced session data
-        if should_callback:
-            print(f"Session {request.sessionId}: Triggering callback (messages: {session.messageCount})")
-            background_tasks.add_task(process_background_callback, session, request.sessionId)
+        if detection_result.is_scam:
+            should_callback = await active_session_manager.should_send_callback(request.sessionId)
+            
+            if should_callback:
+                print(f"Session {request.sessionId}: Triggering callback (messages: {session.messageCount})")
+                background_tasks.add_task(process_background_callback, session, request.sessionId)
         
         if intelligence:
             print(f"Session {request.sessionId}: {extractor.get_intelligence_summary()}")
