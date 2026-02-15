@@ -2,6 +2,8 @@
 Main FastAPI application - Agentic Honey-Pot API
 """
 import time
+import random
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -294,6 +296,15 @@ async def chat(
         # Log intelligence status
         if intelligence:
             print(f"Session {request.sessionId}: {extractor.get_intelligence_summary()}")
+        
+        # Calculate realistic typing delay based on response length
+        typing_speed = 50  # characters per second
+        base_delay = len(response_text) / typing_speed
+        jitter = random.uniform(-0.5, 0.5)
+        delay = max(2.0, min(8.0, base_delay + jitter))
+        
+        print(f"Session {request.sessionId}: Simulating typing delay of {delay:.2f}s for {len(response_text)} chars")
+        await asyncio.sleep(delay)
         
         # Return response
         return MessageResponse(
