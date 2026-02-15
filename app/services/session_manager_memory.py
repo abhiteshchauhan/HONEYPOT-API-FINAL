@@ -62,7 +62,7 @@ class InMemorySessionManager:
             session = await self.create_session(session_id)
         
         session.conversationHistory.append(new_message)
-        session.messageCount += 1
+        session.messageCount = len(session.conversationHistory)
         
         if scam_detected:
             session.scamDetected = True
