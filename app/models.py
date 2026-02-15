@@ -46,6 +46,20 @@ class MessageRequest(BaseModel):
         }
 
 
+class MessageResponse(BaseModel):
+    """Response returned to evaluation platform"""
+    status: str = Field(..., description="Response status: 'success' or 'error'")
+    reply: str = Field(..., description="Agent's response message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+                "reply": "Why is my account being suspended?"
+            }
+        }
+
+
 class ExtractedIntelligence(BaseModel):
     """Extracted intelligence from scammer"""
     bankAccounts: List[str] = Field(default_factory=list, description="Extracted bank account numbers")
@@ -53,34 +67,6 @@ class ExtractedIntelligence(BaseModel):
     phishingLinks: List[str] = Field(default_factory=list, description="Extracted URLs/links")
     phoneNumbers: List[str] = Field(default_factory=list, description="Extracted phone numbers")
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
-
-
-class MessageResponse(BaseModel):
-    """Response returned to evaluation platform"""
-    status: str = Field(..., description="Response status: 'success' or 'error'")
-    reply: str = Field(..., description="Agent's response message")
-    scamDetected: bool = Field(..., description="Whether scam was detected")
-    totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
-    extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
-    agentNotes: str = Field(..., description="Summary of scammer behavior")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "status": "success",
-                "reply": "Why is my account being suspended?",
-                "scamDetected": True,
-                "totalMessagesExchanged": 5,
-                "extractedIntelligence": {
-                    "bankAccounts": [],
-                    "upiIds": [],
-                    "phishingLinks": ["https://sbi.co.in/secure-login"],
-                    "phoneNumbers": ["9876543210"],
-                    "suspiciousKeywords": ["urgent", "verify", "account", "blocked"]
-                },
-                "agentNotes": "Used urgency tactics; Banking/financial scam"
-            }
-        }
 
 
 class FinalResultPayload(BaseModel):

@@ -247,10 +247,7 @@ async def chat(
         return MessageResponse(
             status="success",
             reply=response_text,
-            scamDetected=session.scamDetected,
-            totalMessagesExchanged=session.messageCount,
-            extractedIntelligence=session.extractedIntelligence,
-            agentNotes=session.agentNotes
+            message_count=session.messageCount
         )
     
     except Exception as e:
