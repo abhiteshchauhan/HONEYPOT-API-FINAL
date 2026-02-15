@@ -248,8 +248,8 @@ async def chat(
                 detection_result.categories
             )
             
-            # Add detection reasoning to notes
-            notes = f"{agent_notes}. {detection_result.reasoning}"
+            # Use concise agent notes only
+            notes = agent_notes
         else:
             # Not a scam - give neutral response
             response_text = "I'm not sure what this is about. Can you clarify?"

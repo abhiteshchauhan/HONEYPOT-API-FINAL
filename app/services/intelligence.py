@@ -13,14 +13,17 @@ class IntelligenceExtractor:
     # 1. URL: Supports http, https, and www
     URL_PATTERN = re.compile(r'\b(?:https?://\S+|www\.\S+)\b', re.IGNORECASE)
 
-    # 2. UPI: Stays the same
+    # 2. EMAIL: Standard email pattern
+    EMAIL_PATTERN = re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b')
+
+    # 3. UPI: Stays the same
     UPI_ID_PATTERN = re.compile(r'\b[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\b')
 
-    # 3. GLOBAL PHONE: 
+    # 4. GLOBAL PHONE: 
     # This catches +11..., +91..., and standalone numbers 7-15 digits long.
     # We remove the [6-9] restriction to allow numbers starting with 2, 3, etc.
     PHONE_PATTERN = re.compile(r'\b(?:\+\d{1,3})?[-\s\.]?\d{7,10}(?!\d)')
-    # 4. BANK ACCOUNT: 
+    # 5. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
     BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\d{11,18}(?!\d)')
     
@@ -65,10 +68,18 @@ class IntelligenceExtractor:
             account_spans.append(match.span()) # Save location to prevent phone overlap
             if account not in self.extracted.bankAccounts:
                 self.extracted.bankAccounts.append(account)
-        # Extract UPI IDs
+        
+        # Extract emails first (more specific pattern)
+        emails = self.EMAIL_PATTERN.findall(text)
+        for email in emails:
+            if email not in self.extracted.emailAddresses:
+                self.extracted.emailAddresses.append(email)
+        
+        # Extract UPI IDs (exclude emails)
         upi_ids = self.UPI_ID_PATTERN.findall(text)
         for upi_id in upi_ids:
-            if '@' in upi_id and upi_id not in self.extracted.upiIds:
+            # Check if it's not an email (emails have proper TLDs)
+            if '@' in upi_id and upi_id not in self.extracted.upiIds and upi_id not in self.extracted.emailAddresses:
                 self.extracted.upiIds.append(upi_id)
         
         # Extract phone numbers
@@ -134,7 +145,8 @@ class IntelligenceExtractor:
             len(self.extracted.bankAccounts) +
             len(self.extracted.upiIds) +
             len(self.extracted.phoneNumbers) +
-            len(self.extracted.phishingLinks)
+            len(self.extracted.phishingLinks) +
+            len(self.extracted.emailAddresses)
         )
         return total_items >= min_items
     
@@ -155,6 +167,8 @@ class IntelligenceExtractor:
             items.append(f"{len(self.extracted.phoneNumbers)} phone number(s)")
         if self.extracted.phishingLinks:
             items.append(f"{len(self.extracted.phishingLinks)} suspicious link(s)")
+        if self.extracted.emailAddresses:
+            items.append(f"{len(self.extracted.emailAddresses)} email(s)")
         
         if not items:
             return "No intelligence extracted yet"
@@ -187,6 +201,11 @@ class IntelligenceExtractor:
         for link in other.phishingLinks:
             if link not in self.extracted.phishingLinks:
                 self.extracted.phishingLinks.append(link)
+        
+        # Merge email addresses
+        for email in other.emailAddresses:
+            if email not in self.extracted.emailAddresses:
+                self.extracted.emailAddresses.append(email)
         
         # Merge keywords
         for keyword in other.suspiciousKeywords:

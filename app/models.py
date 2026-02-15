@@ -62,10 +62,11 @@ class MessageResponse(BaseModel):
 
 class ExtractedIntelligence(BaseModel):
     """Extracted intelligence from scammer"""
+    phoneNumbers: List[str] = Field(default_factory=list, description="Extracted phone numbers")
     bankAccounts: List[str] = Field(default_factory=list, description="Extracted bank account numbers")
     upiIds: List[str] = Field(default_factory=list, description="Extracted UPI IDs")
     phishingLinks: List[str] = Field(default_factory=list, description="Extracted URLs/links")
-    phoneNumbers: List[str] = Field(default_factory=list, description="Extracted phone numbers")
+    emailAddresses: List[str] = Field(default_factory=list, description="Extracted email addresses")
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
 
 
