@@ -3,7 +3,7 @@ Main FastAPI application - Agentic Honey-Pot API
 """
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,22 +17,14 @@ from app.services.session_manager import session_manager
 from app.services.session_manager_memory import inmemory_session_manager
 from app.services.callback import callback_service
 
-# Global variable to track which session manager to use
 active_session_manager = None
 use_redis = True
 
-
-# Lifespan context manager for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Manage application lifespan (startup/shutdown events)
-    """
-    # Startup
     global active_session_manager, use_redis
     print("[STARTUP] Starting Agentic Honey-Pot API...")
     
-    # Validate configuration
     try:
         config.validate()
         print("[OK] Configuration validated")
@@ -40,7 +32,6 @@ async def lifespan(app: FastAPI):
         print(f"[ERROR] Configuration error: {e}")
         raise
     
-    # Test Redis connection
     try:
         await session_manager.connect()
         print("[OK] Redis connection established")
@@ -58,13 +49,10 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
     print("[SHUTDOWN] Shutting down...")
     await session_manager.disconnect()
     print("[OK] Cleanup completed")
 
-
-# Initialize FastAPI app
 app = FastAPI(
     title=config.APP_NAME,
     version=config.APP_VERSION,
@@ -72,40 +60,39 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# Initialize services (lazy initialization)
 scam_detector: ScamDetector = None
 ai_agent: AIAgent = None
 
-
 def get_scam_detector() -> ScamDetector:
-    """Get or create ScamDetector instance"""
     global scam_detector
     if scam_detector is None:
         scam_detector = ScamDetector()
     return scam_detector
 
-
 def get_ai_agent() -> AIAgent:
-    """Get or create AIAgent instance"""
     global ai_agent
     if ai_agent is None:
         ai_agent = AIAgent()
     return ai_agent
 
+async def process_background_callback(session, session_id):
+    callback_result = await callback_service.send_if_criteria_met(session)
+    if callback_result:
+        await active_session_manager.mark_callback_sent(session_id)
+        print(f"[OK] Callback sent for session {session_id}")
+    elif callback_result is False:
+        print(f"[ERROR] Callback failed for session {session_id}")
 
 @app.get("/")
 async def root():
-    """Root endpoint - API information"""
     return {
         "name": config.APP_NAME,
         "version": config.APP_VERSION,
@@ -116,11 +103,8 @@ async def root():
         }
     }
 
-
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    # Test Redis connection
     redis_ok = False
     try:
         await session_manager.connect()
@@ -134,34 +118,20 @@ async def health_check():
         "timestamp": int(time.time() * 1000)
     }
 
-
 @app.post("/chat", response_model=MessageResponse)
 async def chat(
     request: MessageRequest,
+    background_tasks: BackgroundTasks,
     api_key: str = Depends(verify_api_key)
 ):
-    """
-    Main chat endpoint for receiving and responding to messages
-    
-    This endpoint:
-    1. Receives a message from the evaluation platform
-    2. Detects if it's a scam
-    3. Engages the AI agent if scam detected
-    4. Extracts intelligence
-    5. Returns a human-like response
-    6. Triggers callback when appropriate
-    """
     try:
-        # Get services
         detector = get_scam_detector()
         agent = get_ai_agent()
         
-        # Get or create session
         session = await active_session_manager.get_session(request.sessionId)
         if not session:
             session = await active_session_manager.create_session(request.sessionId)
         
-        # Detect scam
         detection_result = await detector.detect_scam(
             request.message,
             request.conversationHistory
@@ -171,44 +141,34 @@ async def chat(
               f"{'SCAM' if detection_result.is_scam else 'NOT SCAM'} "
               f"(confidence: {detection_result.confidence:.2f})")
         
-        # Extract intelligence from current message
         extractor = IntelligenceExtractor()
         extractor.extract_from_text(request.message.text)
         
-        # Also extract from conversation history if this is first message
         if not session.conversationHistory:
             extractor.extract_from_messages(request.conversationHistory)
         
-        # Merge with existing intelligence from session
         if session.extractedIntelligence:
             extractor.merge_intelligence(session.extractedIntelligence)
         
         intelligence = extractor.get_extracted_intelligence()
         
-        # Generate response based on scam detection
         if detection_result.is_scam:
-            # Scam detected - engage AI agent
             response_text, agent_notes = await agent.generate_context_aware_response(
                 request.message,
                 request.conversationHistory,
                 detection_result.categories
             )
-            
-            # Add detection reasoning to notes
             notes = f"{agent_notes}. {detection_result.reasoning}"
         else:
-            # Not a scam - give neutral response
             response_text = "I'm not sure what this is about. Can you clarify?"
             notes = "No scam detected"
         
-        # Create user response message for history
         user_response = Message(
             sender="user",
             text=response_text,
             timestamp=int(time.time() * 1000)
         )
         
-        # Update session
         session = await active_session_manager.update_session(
             session_id=request.sessionId,
             new_message=request.message,
@@ -217,31 +177,19 @@ async def chat(
             notes=notes
         )
         
-        # Add user's response to session too
         session.conversationHistory.append(user_response)
         await active_session_manager.save_session(session)
         
-        # Check if we should send callback
         if detection_result.is_scam:
             should_callback = await active_session_manager.should_send_callback(request.sessionId)
             
             if should_callback:
                 print(f"Session {request.sessionId}: Triggering callback (messages: {session.messageCount})")
-                
-                # Send callback in background (don't wait)
-                callback_result = await callback_service.send_if_criteria_met(session)
-                
-                if callback_result:
-                    await active_session_manager.mark_callback_sent(request.sessionId)
-                    print(f"[OK] Callback sent for session {request.sessionId}")
-                elif callback_result is False:
-                    print(f"[ERROR] Callback failed for session {request.sessionId}")
+                background_tasks.add_task(process_background_callback, session, request.sessionId)
         
-        # Log intelligence status
         if intelligence:
             print(f"Session {request.sessionId}: {extractor.get_intelligence_summary()}")
         
-        # Return response
         return MessageResponse(
             status="success",
             reply=response_text,
@@ -253,16 +201,13 @@ async def chat(
         import traceback
         traceback.print_exc()
         
-        # Return error response
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
 
-
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    """Custom HTTP exception handler"""
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -271,10 +216,8 @@ async def http_exception_handler(request, exc):
         }
     )
 
-
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    """General exception handler"""
     print(f"Unhandled exception: {exc}")
     import traceback
     traceback.print_exc()
@@ -286,7 +229,6 @@ async def general_exception_handler(request, exc):
             "detail": "Internal server error"
         }
     )
-
 
 if __name__ == "__main__":
     import uvicorn
