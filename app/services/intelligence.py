@@ -83,8 +83,12 @@ class IntelligenceExtractor:
             if not is_sub_match:
                 clean_phone = re.sub(r'[-.\s()]', '', phone)
                 # Keep original format for list, or use clean_phone
-                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
-                    self.extracted.phoneNumbers.append(phone.strip())
+                if len(clean_phone) >= 7:
+                    # Remove existing country code if present, then add +91-
+                    clean_phone = re.sub(r'^\+\d{1,3}', '', clean_phone)
+                    formatted_phone = f"+91-{clean_phone}"
+                    if formatted_phone not in self.extracted.phoneNumbers:
+                        self.extracted.phoneNumbers.append(formatted_phone)
         # Extract URLs
         urls = self.URL_PATTERN.findall(text)
         for url in urls:
