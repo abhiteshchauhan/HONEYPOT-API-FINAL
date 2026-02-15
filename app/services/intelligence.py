@@ -4,6 +4,7 @@ Intelligence extraction from scammer conversations
 import re
 from typing import List, Set
 from app.models import ExtractedIntelligence, Message
+from app.services.filter import is_scammer_data
 
 class IntelligenceExtractor:
     """Extract intelligence from scammer messages"""
@@ -44,84 +45,47 @@ class IntelligenceExtractor:
     def __init__(self):
         self.extracted: ExtractedIntelligence = ExtractedIntelligence()
 
-    def _is_user_context(self, text: str, match_span: tuple, window_size: int = 35) -> bool:
-        """
-        Check if the extracted item is near words indicating it belongs 
-        to the user rather than the scammer (e.g., "your account", "is this yours?").
-        """
-        start_idx, end_idx = match_span
-        
-        # Look behind the match
-        start = max(0, start_idx - window_size)
-        preceding_text = text[start:start_idx].lower()
-        
-        # Look ahead of the match (e.g., "1234567890 is your number?")
-        end = min(len(text), end_idx + 20)
-        following_text = text[end_idx:end].lower()
-        
-        # Words that indicate the data belongs to the user or the bot
-        exclusion_pattern = r'\b(your|yours|my|mine)\b'
-        
-        if re.search(exclusion_pattern, preceding_text) or re.search(exclusion_pattern, following_text):
-            return True
-            
-        return False
+
     
-    def extract_from_text(self, text: str) -> None:
-        """
-        Extract intelligence from a single text message
-        """
+    async def extract_from_text(self, text: str) -> None:
         text_lower = text.lower()
         
-        # Extract bank accounts
         bank_accounts = self.BANK_ACCOUNT_PATTERN.finditer(text)
         account_spans = []
         for match in bank_accounts:
-            # Skip if it is referenced as the user's account
-            if self._is_user_context(text, match.span()):
-                continue
-                
             account = match.group()
-            account_spans.append(match.span()) # Save location to prevent phone overlap
-            if account not in self.extracted.bankAccounts:
-                self.extracted.bankAccounts.append(account)
-                
-        # Extract UPI IDs (Changed to finditer to check position context)
+            account_spans.append(match.span())
+            if await is_scammer_data(text, account, "bank account"):
+                if account not in self.extracted.bankAccounts:
+                    self.extracted.bankAccounts.append(account)
+                    
         upi_ids = self.UPI_ID_PATTERN.finditer(text)
         for match in upi_ids:
-            if self._is_user_context(text, match.span()):
-                continue
-                
             upi_id = match.group()
-            if '@' in upi_id and upi_id not in self.extracted.upiIds:
-                self.extracted.upiIds.append(upi_id)
+            if '@' in upi_id:
+                if await is_scammer_data(text, upi_id, "UPI ID"):
+                    if upi_id not in self.extracted.upiIds:
+                        self.extracted.upiIds.append(upi_id)
         
-        # Extract phone numbers
         phone_matches = self.PHONE_PATTERN.finditer(text)
         for match in phone_matches:
-            if self._is_user_context(text, match.span()):
-                continue
-                
             phone = match.group()
             phone_span = match.span()
             
-            # Check if this phone match is actually just a part of a bank account
             is_sub_match = any(phone_span[0] >= s[0] and phone_span[1] <= s[1] for s in account_spans)
             
             if not is_sub_match:
-                clean_phone = re.sub(r'[-.\s()]', '', phone)
-                if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
-                    self.extracted.phoneNumbers.append(phone.strip())
-                    
-        # Extract URLs (Changed to finditer to check position context)
+                if await is_scammer_data(text, phone, "phone number"):
+                    clean_phone = re.sub(r'[-.\s()]', '', phone)
+                    if len(clean_phone) >= 7 and phone.strip() not in self.extracted.phoneNumbers:
+                        self.extracted.phoneNumbers.append(phone.strip())
+                        
         urls = self.URL_PATTERN.finditer(text)
         for match in urls:
-            if self._is_user_context(text, match.span()):
-                continue
-                
             url = match.group()
-            if url not in self.extracted.phishingLinks:
-                self.extracted.phishingLinks.append(url)
+            if await is_scammer_data(text, url, "URL"):
+                if url not in self.extracted.phishingLinks:
+                    self.extracted.phishingLinks.append(url)
         
         # Extract suspicious keywords
         for keyword in self.SUSPICIOUS_KEYWORDS:
@@ -129,7 +93,7 @@ class IntelligenceExtractor:
                 if keyword not in self.extracted.suspiciousKeywords:
                     self.extracted.suspiciousKeywords.append(keyword)
     
-    def extract_from_messages(self, messages: List[Message]) -> None:
+    async def extract_from_messages(self, messages: List[Message]) -> None:
         """
         Extract intelligence from a list of messages
         """
