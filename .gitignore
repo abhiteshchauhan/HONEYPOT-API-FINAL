@@ -29,6 +29,7 @@ env/
 # Environment Variables
 .env
 .env.local
+# Note: .env.example is NOT ignored - it should be committed to version control
 
 # IDE
 .vscode/

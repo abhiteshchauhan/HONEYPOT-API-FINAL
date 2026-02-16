@@ -1,5 +1,4 @@
-# Agentic Honey-Pot API
-
+## AGENTIC HONEYPOT API
 An AI-powered honeypot system that detects scam messages, autonomously engages scammers in realistic conversations, and extracts actionable intelligence.
 
 ## Overview
@@ -10,71 +9,16 @@ This system uses advanced AI to:
 - **Extract intelligence** (bank accounts, UPI IDs, phone numbers, phishing links)
 - **Report findings** to evaluation endpoints automatically
 
-## Architecture
-
-```
-┌─────────────────┐
-│ Evaluation      │
-│ Platform        │
-└────────┬────────┘
-         │ POST /chat
-         ▼
-┌─────────────────┐
-│ FastAPI         │◄─── API Key Auth
-│ Endpoint        │
-└────────┬────────┘
-         │
-    ┌────┴────┬──────────┬─────────┐
-    ▼         ▼          ▼         ▼
-┌────────┐ ┌──────┐ ┌────────┐ ┌──────────┐
-│ Scam   │ │ AI   │ │ Intel  │ │ Session  │
-│Detector│ │Agent │ │Extract │ │ Manager  │
-└────────┘ └──────┘ └────────┘ └─────┬────┘
-                                      │
-                                 ┌────▼────┐
-                                 │ Redis   │
-                                 └─────────┘
-```
-
-## Features
-
-### 🔍 Intelligent Scam Detection
-- **Phase 1**: Fast pattern-based detection for urgency, threats, banking terms
-- **Phase 2**: LLM-powered analysis for accurate classification
-- Confidence scoring and category tagging
-
-### 🤖 Human-like AI Agent
-- Maintains believable persona as a concerned user
-- Keeps responses short and natural (SMS-like)
-- Asks probing questions to extract information
-- Never reveals detection
-
-### 📊 Intelligence Extraction
-- Bank account numbers (10-18 digits)
-- UPI IDs (username@provider format)
-- Phone numbers (international/Indian formats)
-- Phishing URLs and suspicious links
-- Scam-related keywords
-
-### 💾 Session Management
-- Redis-based conversation persistence
-- Tracks message counts and engagement depth
-- Stores extracted intelligence cumulatively
-- 24-hour session TTL
-
-### 📤 Automated Reporting
-- Triggers callback after sufficient engagement (5+ messages or 2+ intelligence items)
-- Exponential backoff retry logic (3 attempts)
-- Sends comprehensive results to evaluation endpoint
-
 ## Tech Stack
 
 - **Framework**: FastAPI (async, high-performance)
-- **AI**: OpenAI GPT-4 for conversational agent
+- **AI**: OpenAI GPT-4.1 for conversational agent
 - **Storage**: Redis for session management
 - **Deployment**: Serverless-ready (Vercel, Railway, etc.)
 
-## Quick Start
+
+
+## Quick Setup
 
 ### Prerequisites
 
@@ -145,6 +89,7 @@ This system uses advanced AI to:
      }'
    ```
 
+
 ## API Endpoints
 
 ### POST `/chat`
@@ -192,8 +137,6 @@ Health check endpoint.
   "redis": "connected",
   "timestamp": 1770005528731
 }
-```
-
 ## Deployment
 
 ### Redis Cloud Setup
@@ -203,25 +146,7 @@ Health check endpoint.
 3. Copy the connection string
 4. Update `REDIS_URL` in `.env`
 
-### Upstash Redis (Serverless-friendly)
 
-1. Sign up at [Upstash](https://upstash.com/)
-2. Create a Redis database
-3. Copy the REST URL or Redis connection string
-4. Update `REDIS_URL` in `.env`
-
-### Deploy to Railway
-
-1. Install Railway CLI: `npm i -g @railway/cli`
-2. Login: `railway login`
-3. Initialize: `railway init`
-4. Add Redis: `railway add` → Select Redis
-5. Set environment variables:
-   ```bash
-   railway variables set API_KEY=your-secret-key
-   railway variables set OPENAI_API_KEY=sk-...
-   ```
-6. Deploy: `railway up`
 
 ### Deploy to Vercel (with Serverless)
 
@@ -244,6 +169,70 @@ All configuration is managed via environment variables:
 | `MIN_INTELLIGENCE_ITEMS` | Min intelligence items for callback | `2` |
 | `SCAM_DETECTION_CONFIDENCE_THRESHOLD` | Scam confidence threshold | `0.7` |
 | `DEBUG` | Enable debug mode | `False` |
+
+
+
+## Features
+
+### 🔍 Intelligent Scam Detection
+- **Phase 1**: Fast pattern-based detection for urgency, threats, banking terms
+- **Phase 2**: LLM-powered analysis for accurate classification
+- Confidence scoring and category tagging
+
+### 🤖 Human-like AI Agent
+- Maintains believable persona as a concerned user
+- Keeps responses short and natural (SMS-like)
+- Asks probing questions to extract information
+- Never reveals detection
+
+### 📊 Intelligence Extraction
+- Bank account numbers (10-18 digits)
+- UPI IDs (username@provider format)
+- Phone numbers (international/Indian formats)
+- Phishing URLs and suspicious links
+- Scam-related keywords
+
+### 💾 Session Management
+- Redis-based conversation persistence
+- Tracks message counts and engagement depth
+- Stores extracted intelligence cumulatively
+- 24-hour session TTL
+
+### 📤 Automated Reporting
+- Triggers callback after sufficient engagement (5+ messages or 2+ intelligence items)
+- Exponential backoff retry logic (3 attempts)
+- Sends comprehensive results to evaluation endpoint
+
+
+
+```
+
+## Architecture
+
+```
+┌─────────────────┐
+│ Evaluation      │
+│ Platform        │
+└────────┬────────┘
+         │ POST /chat
+         ▼
+┌─────────────────┐
+│ FastAPI         │◄─── API Key Auth
+│ Endpoint        │
+└────────┬────────┘
+         │
+    ┌────┴────┬──────────┬─────────┐
+    ▼         ▼          ▼         ▼
+┌────────┐ ┌──────┐ ┌────────┐ ┌──────────┐
+│ Scam   │ │ AI   │ │ Intel  │ │ Session  │
+│Detector│ │Agent │ │Extract │ │ Manager  │
+└────────┘ └──────┘ └────────┘ └─────┬────┘
+                                      │
+                                 ┌────▼────┐
+                                 │ Redis   │
+                                 └─────────┘
+```
+
 
 ## Project Structure
 
@@ -358,53 +347,12 @@ curl -X POST http://localhost:8000/chat \
    - "Click here to update KYC: http://fake-bank.com"
    - "Your parcel is stuck. Pay customs: http://delivery-scam.com"
 
-## Troubleshooting
-
-### Redis Connection Failed
-- Ensure Redis is running: `redis-cli ping` (should return `PONG`)
-- Check `REDIS_URL` in `.env`
-- For cloud Redis, verify connection string and credentials
-
-### OpenAI API Errors
-- Verify `OPENAI_API_KEY` is valid
-- Check API quota/rate limits
-- Ensure model name is correct (e.g., `gpt-4`)
-
-### Callback Not Sent
-- Check minimum criteria: 5+ messages or 2+ intelligence items
-- Verify `GUVI_CALLBACK_URL` is accessible
-- Check logs for retry attempts and errors
-
-### API Key Authentication Failed
-- Ensure `x-api-key` header is included in requests
-- Verify API key matches `API_KEY` in `.env`
-
-## Performance Optimization
-
-- **Async Operations**: All I/O operations are async for high concurrency
-- **Redis Connection Pooling**: Reuses connections efficiently
-- **LLM Caching**: Pattern-based detection reduces LLM calls
-- **Lazy Initialization**: Services created only when needed
-
-## Security Considerations
-
-- ✅ API key authentication required
-- ✅ Environment-based secrets (never hardcode)
-- ✅ Redis session TTL prevents data accumulation
-- ✅ No PII logging
-- ✅ CORS configurable for production
-
 ## License
 
 MIT License - See LICENSE file for details
 
-## Support
 
-For issues or questions:
-- Check the troubleshooting section
-- Review logs for detailed error messages
-- Verify all environment variables are set correctly
 
-## Credits
 
-Built for GUVI Hackathon - Agentic Honey-Pot Challenge
+                      
+
