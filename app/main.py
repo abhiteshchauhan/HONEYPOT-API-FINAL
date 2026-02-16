@@ -275,6 +275,7 @@ async def chat(
         
         # Add user's response to session too
         session.conversationHistory.append(user_response)
+        session.messageCount = len(session.conversationHistory)
         await active_session_manager.save_session(session)
         
         # Check if we should send callback
