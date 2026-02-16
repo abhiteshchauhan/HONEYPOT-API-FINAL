@@ -273,20 +273,26 @@ async def chat(
             notes=notes
         )
         
+        print(f"DEBUG [{request.sessionId}]: After adding scammer msg - History: {len(session.conversationHistory)}, Count: {session.messageCount}")
+        
         # Add user's response to session too
         session.conversationHistory.append(user_response)
         session.messageCount = len(session.conversationHistory)
         await active_session_manager.save_session(session)
         
+        print(f"DEBUG [{request.sessionId}]: After adding agent msg - History: {len(session.conversationHistory)}, Count: {session.messageCount}")
+        
         # Check if we should send callback
         if detection_result.is_scam:
+            # Get fresh session with updated message count
+            updated_session = await active_session_manager.get_session(request.sessionId)
             should_callback = await active_session_manager.should_send_callback(request.sessionId)
             
             if should_callback:
-                print(f"Session {request.sessionId}: Triggering callback (messages: {session.messageCount})")
+                print(f"Session {request.sessionId}: Triggering callback (messages: {updated_session.messageCount})")
                 
-                # Send callback in background (don't wait)
-                callback_result = await callback_service.send_if_criteria_met(session)
+                # Send callback with updated session that includes agent response
+                callback_result = await callback_service.send_if_criteria_met(updated_session)
                 
                 if callback_result:
                     await active_session_manager.mark_callback_sent(request.sessionId)
