@@ -155,10 +155,21 @@ class SessionManager:
         if intelligence:
             session.extractedIntelligence = intelligence
         
-        # Append notes
+        # Update notes with smart summarization (keep under 100 words)
         if notes:
             if session.agentNotes:
-                session.agentNotes += f" | {notes}"
+                # Combine old and new notes
+                combined = f"{session.agentNotes} | {notes}"
+                # Keep only unique tactics/behaviors
+                parts = [p.strip() for p in combined.split('|')]
+                unique_parts = []
+                seen = set()
+                for part in parts:
+                    if part and part not in seen:
+                        unique_parts.append(part)
+                        seen.add(part)
+                # Limit to last 8 unique observations to stay under 100 words
+                session.agentNotes = " | ".join(unique_parts[-8:])
             else:
                 session.agentNotes = notes
         
