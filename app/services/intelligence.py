@@ -25,7 +25,7 @@ class IntelligenceExtractor:
     PHONE_PATTERN = re.compile(r'\b(?:\+\d{1,3})?[-\s\.]?\d{7,10}(?!\d)')
     # 5. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
-    BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\d{11,18}(?!\d)')
+    BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\(?\d{11,18}\)?(?!\d)')
     
     # Suspicious keywords to track
     SUSPICIOUS_KEYWORDS = {
