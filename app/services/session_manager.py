@@ -145,7 +145,7 @@ class SessionManager:
         
         # Add new message to history
         session.conversationHistory.append(new_message)
-        session.messageCount += 1
+        session.messageCount = len(session.conversationHistory)
         
         # Update scam detection status
         if scam_detected:
