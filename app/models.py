@@ -69,6 +69,10 @@ class ExtractedIntelligence(BaseModel):
     emailAddresses: List[str] = Field(default_factory=list, description="Extracted email addresses")
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
 
+class EngagementMetrics(BaseModel):
+    totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
+    engagementDurationSeconds: int = Field(..., description="Engagement duration in seconds")
+
 
 class FinalResultPayload(BaseModel):
     """Payload sent to GUVI callback endpoint"""
@@ -77,6 +81,7 @@ class FinalResultPayload(BaseModel):
     totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
     extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
     agentNotes: str = Field(..., description="Summary of scammer behavior")
+    engagementMetrics: EngagementMetrics = Field(..., description="Engagement metrics")
 
     class Config:
         json_schema_extra = {
@@ -91,7 +96,11 @@ class FinalResultPayload(BaseModel):
                     "phoneNumbers": ["+91XXXXXXXXXX"],
                     "suspiciousKeywords": ["urgent", "verify now", "account blocked"]
                 },
-                "agentNotes": "Scammer used urgency tactics and payment redirection"
+                "agentNotes": "Scammer used urgency tactics and payment redirection",
+                "engagementMetrics": {
+                    "totalMessagesExchanged": 18,
+                    "engagementDurationSeconds": 0
+                }
             }
         }
 
@@ -112,6 +121,7 @@ class SessionData(BaseModel):
     scamDetected: bool = Field(default=False)
     extractedIntelligence: ExtractedIntelligence = Field(default_factory=ExtractedIntelligence)
     agentNotes: str = Field(default="")
+    engagementMetrics: EngagementMetrics = Field(default_factory=EngagementMetrics)
     callbackSent: bool = Field(default=False)
     createdAt: Optional[int] = Field(default=None)
     updatedAt: Optional[int] = Field(default=None)

@@ -3,7 +3,7 @@ In-memory session management (fallback when Redis is unavailable)
 """
 import time
 from typing import Optional, Dict
-from app.models import SessionData, Message, ExtractedIntelligence
+from app.models import SessionData, Message, ExtractedIntelligence, EngagementMetrics
 
 
 class InMemorySessionManager:
@@ -35,6 +35,7 @@ class InMemorySessionManager:
             scamDetected=False,
             extractedIntelligence=ExtractedIntelligence(),
             agentNotes="",
+            engagementMetrics=EngagementMetrics(),
             callbackSent=False,
             createdAt=now,
             updatedAt=now
