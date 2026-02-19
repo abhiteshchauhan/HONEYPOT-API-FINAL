@@ -4,6 +4,7 @@ Main FastAPI application - Agentic Honey-Pot API
 import time
 import random
 import asyncio
+from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -160,12 +161,26 @@ async def get_final_results(
             )
         duration_seconds = 0
 
-        if session.conversationHistory and len(session.conversationHistory) > 0:
+        if session.conversationHistory and len(session.conversationHistory) > 1:
             try:
-                start_time = int(session.conversationHistory[0].timestamp)
-                end_time = int(session.conversationHistory[-1].timestamp)
-                duration_seconds = max(0, (end_time - start_time) // 1000)
-            except (ValueError, TypeError, AttributeError):
+                def parse_timestamp(ts):
+                    if isinstance(ts, (int, float)):
+                        return int(ts)
+                    if isinstance(ts, str):
+                        try:
+                            ts_clean = ts.replace('Z', '+00:00')
+                            dt = datetime.fromisoformat(ts_clean)
+                            return int(dt.timestamp() * 1000)
+                        except ValueError:
+                            pass
+                    return 0
+
+                start_time = parse_timestamp(session.conversationHistory[0].timestamp)
+                end_time = parse_timestamp(session.conversationHistory[-1].timestamp)
+                
+                if start_time > 0 and end_time > 0:
+                    duration_seconds = max(0, (end_time - start_time) // 1000)
+            except Exception:
                 pass
         
         # Build the final result payload
