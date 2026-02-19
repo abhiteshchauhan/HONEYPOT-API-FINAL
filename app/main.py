@@ -158,6 +158,15 @@ async def get_final_results(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Session {session_id} not found"
             )
+        duration_seconds = 0
+
+        if session.conversationHistory and len(session.conversationHistory) > 0:
+            try:
+                start_time = int(session.conversationHistory[0].timestamp)
+                end_time = int(session.conversationHistory[-1].timestamp)
+                duration_seconds = max(0, (end_time - start_time) // 1000)
+            except (ValueError, TypeError, AttributeError):
+                pass
         
         # Build the final result payload
         from app.models import FinalResultPayload
@@ -169,7 +178,7 @@ async def get_final_results(
             agentNotes=session.agentNotes or "Session data retrieved",
             engagementMetrics={
                 "totalMessagesExchanged": session.messageCount,
-                "engagementDurationSeconds": 0
+                "engagementDurationSeconds": duration_seconds
             }
         )
     

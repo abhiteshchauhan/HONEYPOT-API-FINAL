@@ -36,13 +36,27 @@ class CallbackService:
             print(f"Callback already sent for session {session.sessionId}")
             return True
         
+        duration_seconds = 0
+        
+        if session.conversationHistory and len(session.conversationHistory) > 0:
+            try:
+                start_time = int(session.conversationHistory[0].timestamp)
+                end_time = int(session.conversationHistory[-1].timestamp)
+                duration_seconds = max(0, (end_time - start_time) // 1000)
+            except (ValueError, TypeError, AttributeError):
+                pass
+        
         # Build payload
         payload = FinalResultPayload(
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
-            agentNotes=session.agentNotes or "Scam engagement completed"
+            agentNotes=session.agentNotes or "Scam engagement completed",
+            engagementMetrics={
+                "totalMessagesExchanged": session.messageCount,
+                "engagementDurationSeconds": session.engagementDurationSeconds
+            }
         )
         
         # Send with retry logic

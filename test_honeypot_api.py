@@ -135,7 +135,11 @@ def test_honeypot_api():
     "phishingLinks": ["http://malicious-site.com"],
     "emailAddresses": ["scammer@fake.com"]
     },
-    "agentNotes": "Scammer claimed to be from SBI fraud department, provided fake ID..."
+    "agentNotes": "Scammer claimed to be from SBI fraud department, provided fake ID...",
+    "engagementMetrics": {
+        "totalMessagesExchanged": 18,
+        "engagementDurationSeconds": 300
+    }
 
     }
     
@@ -194,7 +198,7 @@ def evaluate_final_output(final_output, scenario, conversation_history):
     metrics = final_output.get('engagementMetrics', {})
     duration = metrics.get('engagementDurationSeconds', 0)
     messages = metrics.get('totalMessagesExchanged', 0)
-    #print(duration)
+    print(duration)
     #print(messages)
     
     if duration > 0:
