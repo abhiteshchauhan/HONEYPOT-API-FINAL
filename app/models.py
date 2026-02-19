@@ -70,8 +70,8 @@ class ExtractedIntelligence(BaseModel):
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
 
 class EngagementMetrics(BaseModel):
-    totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
-    engagementDurationSeconds: int = Field(..., description="Engagement duration in seconds")
+    totalMessagesExchanged: int =0, Field(..., description="Total messages in conversation")
+    engagementDurationSeconds: int =0,Field(..., description="Engagement duration in seconds")
 
 
 class FinalResultPayload(BaseModel):
