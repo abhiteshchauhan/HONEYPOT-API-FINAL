@@ -119,6 +119,7 @@ class SessionData(BaseModel):
     conversationHistory: List[Message] = Field(default_factory=list)
     messageCount: int = Field(default=0)
     scamDetected: bool = Field(default=False)
+    engagementDurationSeconds: int = Field(default=0, description="Engagement duration in seconds")
     extractedIntelligence: ExtractedIntelligence = Field(default_factory=ExtractedIntelligence)
     agentNotes: str = Field(default="")
     engagementMetrics: EngagementMetrics = Field(default_factory=EngagementMetrics)
