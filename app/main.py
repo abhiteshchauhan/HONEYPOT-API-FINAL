@@ -19,6 +19,7 @@ from app.services.intelligence import IntelligenceExtractor
 from app.services.session_manager import session_manager
 from app.services.session_manager_memory import inmemory_session_manager
 from app.services.callback import callback_service
+from app.services.image_handler import ImageHandler
 
 # Global variable to track which session manager to use
 active_session_manager = None
@@ -262,7 +263,14 @@ async def chat(
         # Get services
         detector = get_scam_detector()
         agent = get_ai_agent()
-        
+
+        # If message.text contains image data (data URI or raw base64), convert to text
+        image_handler = ImageHandler()
+        if image_handler.is_image(request.message.text):
+            print(f"Session {request.sessionId}: Image input detected, invoking Vision API...")
+            request.message.text = await image_handler.text_to_description(request.message.text)
+            print(f"Session {request.sessionId}: Image described -> {request.message.text[:100]}...")
+
         # Get or create session
         session = await active_session_manager.get_session(request.sessionId)
         
