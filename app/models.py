@@ -94,7 +94,6 @@ class EngagementMetrics(BaseModel):
 
 class FinalResultPayload(BaseModel):
     """Payload sent to GUVI callback endpoint"""
-    status: str = Field(default="success", description="Response status")
     sessionId: str = Field(..., description="Session identifier")
     scamDetected: bool = Field(..., description="Whether scam was confirmed")
     scamType: str = Field(default="Unknown", description="Human-readable scam type label")
