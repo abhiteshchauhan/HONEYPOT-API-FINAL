@@ -99,26 +99,20 @@ class CallbackService:
         """
         async with httpx.AsyncClient() as client:
             try:
-                payload_dict = payload.model_dump()
-                print(f"[CALLBACK] Sending to: {self.callback_url}")
-                print(f"[CALLBACK] Payload: {payload_dict}")
                 response = await client.post(
                     self.callback_url,
-                    json=payload_dict,
+                    json=payload.model_dump(),
                     headers={
                         "Content-Type": "application/json"
                     },
                     timeout=self.timeout
                 )
                 
-                print(f"[CALLBACK] Response status: {response.status_code}")
-                print(f"[CALLBACK] Response body: {response.text}")
-                
                 # Consider 2xx status codes as success
                 if 200 <= response.status_code < 300:
                     return True
                 
-                print(f"[CALLBACK ERROR] status {response.status_code}: {response.text}")
+                print(f"Callback returned status {response.status_code}: {response.text}")
                 return False
             
             except httpx.TimeoutException:
