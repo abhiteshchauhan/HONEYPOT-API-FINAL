@@ -384,21 +384,10 @@ async def chat(
         # print(f"Session {request.sessionId}: Simulating typing delay of {delay:.2f}s for {len(response_text)} chars")
         # await asyncio.sleep(delay)
         
-        # Return response with full session intelligence
+        # Return response - keep simple so GUVI can parse correctly
         return MessageResponse(
             status="success",
-            reply=response_text,
-            sessionId=request.sessionId,
-            scamDetected=session.scamDetected,
-            scamType=session.scamType,
-            scamCategories=session.scamCategories,
-            confidenceScore=session.confidenceScore,
-            extractedIntelligence=session.extractedIntelligence.model_dump(),
-            agentNotes=session.agentNotes or None,
-            engagementMetrics={
-                "totalMessagesExchanged": session.messageCount,
-                "engagementDurationSeconds": session.engagementMetrics.engagementDurationSeconds
-            }
+            reply=response_text
         )
     
     except Exception as e:
