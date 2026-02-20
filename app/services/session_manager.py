@@ -156,10 +156,12 @@ class SessionManager:
         if scam_detected:
             session.scamDetected = True
         
-        # Update scam categories (merge unique)
+        # Update scam categories (merge unique, case-insensitive)
+        existing_lower = [c.lower() for c in session.scamCategories]
         for cat in categories:
-            if cat not in session.scamCategories:
+            if cat.lower() not in existing_lower:
                 session.scamCategories.append(cat)
+                existing_lower.append(cat.lower())
         
         # Keep highest confidence seen across all messages
         if confidence > session.confidenceScore:
