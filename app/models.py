@@ -4,13 +4,14 @@ Pydantic models for request/response validation
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from datetime import datetime
-
+from typing import Union
+from pydantic import BaseModel
 
 class Message(BaseModel):
     """Individual message structure"""
     sender: str = Field(..., description="Sender of the message: 'scammer' or 'user'")
     text: str = Field(..., description="Message content")
-    timestamp: int = Field(..., description="Epoch time in milliseconds")
+    timestamp:Union[int, float, str] = Field(..., description="Epoch time in milliseconds")
 
 
 class Metadata(BaseModel):
