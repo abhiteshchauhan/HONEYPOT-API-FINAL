@@ -401,10 +401,22 @@ async def chat(
         # print(f"Session {request.sessionId}: Simulating typing delay of {delay:.2f}s for {len(response_text)} chars")
         # await asyncio.sleep(delay)
         
-        # Return response
+        # Return response with full session intelligence
         return MessageResponse(
             status="success",
-            reply=response_text
+            reply=response_text,
+            sessionId=request.sessionId,
+            scamDetected=session.scamDetected,
+            scamType=session.scamType,
+            scamCategories=session.scamCategories,
+            confidenceScore=session.confidenceScore,
+            totalMessagesExchanged=session.messageCount,
+            extractedIntelligence=session.extractedIntelligence.model_dump(),
+            agentNotes=session.agentNotes or None,
+            engagementMetrics={
+                "totalMessagesExchanged": session.engagementMetrics.totalMessagesExchanged,
+                "engagementDurationSeconds": session.engagementMetrics.engagementDurationSeconds
+            }
         )
     
     except Exception as e:

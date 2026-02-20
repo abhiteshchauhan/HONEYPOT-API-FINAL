@@ -51,12 +51,30 @@ class MessageResponse(BaseModel):
     """Response returned to evaluation platform"""
     status: str = Field(..., description="Response status: 'success' or 'error'")
     reply: str = Field(..., description="Agent's response message")
+    sessionId: Optional[str] = Field(None, description="Session identifier")
+    scamDetected: Optional[bool] = Field(None, description="Whether scam was detected")
+    scamType: Optional[str] = Field(None, description="Human-readable scam type label")
+    scamCategories: Optional[List[str]] = Field(None, description="Detected scam categories")
+    confidenceScore: Optional[float] = Field(None, description="Scam detection confidence 0-1")
+    totalMessagesExchanged: Optional[int] = Field(None, description="Total messages so far")
+    extractedIntelligence: Optional[Any] = Field(None, description="Intelligence extracted so far")
+    agentNotes: Optional[str] = Field(None, description="Agent notes summary")
+    engagementMetrics: Optional[Any] = Field(None, description="Engagement metrics")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "status": "success",
-                "reply": "Why is my account being suspended?"
+                "reply": "Why is my account being suspended?",
+                "sessionId": "abc123-session-id",
+                "scamDetected": True,
+                "scamType": "Bank Fraud",
+                "scamCategories": ["banking", "urgency"],
+                "confidenceScore": 0.87,
+                "totalMessagesExchanged": 4,
+                "extractedIntelligence": {},
+                "agentNotes": "Used urgency tactics; Banking/financial scam",
+                "engagementMetrics": {"totalMessagesExchanged": 4, "engagementDurationSeconds": 12}
             }
         }
 
