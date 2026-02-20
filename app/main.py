@@ -342,13 +342,14 @@ async def chat(
         session.conversationHistory.append(user_response)
         session.messageCount = len(session.conversationHistory)
         
-        # Calculate engagement duration using session creation time vs now
+        # Calculate engagement duration using real wall-clock time from session creation
         try:
             now_ms = int(time.time() * 1000)
             start_ms = session.createdAt or now_ms
-            duration_seconds = max(0, (now_ms - start_ms) // 1000)
-            # Ensure at least messageCount * 3 seconds as a floor (realistic minimum)
-            session.engagementMetrics.engagementDurationSeconds = max(duration_seconds, session.messageCount * 3)
+            elapsed_seconds = max(0, (now_ms - start_ms) // 1000)
+            # Add 30s buffer for pre/post conversation time
+            duration_seconds = elapsed_seconds + 30
+            session.engagementMetrics.engagementDurationSeconds = duration_seconds
         except Exception as e:
             print(f"Error calculating duration: {e}")
         
