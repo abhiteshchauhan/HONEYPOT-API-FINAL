@@ -125,23 +125,42 @@ def test_honeypot_api():
     print("=" * 60)
     
     final_output = {
-        "sessionId": "abc123-session-id",
-   "scamDetected": 'true',
-   "totalMessagesExchanged": 18,
-   "extractedIntelligence": {
-    "phoneNumbers": ["+91-9876543210"],
-    "bankAccounts": ["1234567890123456"],
-    "upiIds": ["scammer.fraud@fakebank"],
-    "phishingLinks": ["http://malicious-site.com"],
-    "emailAddresses": ["scammer@fake.com"]
-    },
-    "agentNotes": "Scammer claimed to be from SBI fraud department, provided fake ID...",
-    "engagementMetrics": {
-        "totalMessagesExchanged": 18,
-        "engagementDurationSeconds": 300
-    }
-
-    }
+  "status": "success",
+  "scamDetected": True,
+  "extractedIntelligence": {
+    "phoneNumbers": [
+      "+91-9876543210"
+    ],
+    "bankAccounts": [
+      "1234567890123456"
+    ],
+    "upiIds": [],
+    "phishingLinks": [
+      "https://secure-sbi-login.fake/verify?acc=1234567890123456"
+    ],
+    "emailAddresses": [],
+    "suspiciousKeywords": [
+      "account",
+      "otp",
+      "provide",
+      "now",
+      "immediately",
+      "blocked",
+      "locked",
+      "verify",
+      "link",
+      "login",
+      "send",
+      "share",
+      "urgent"
+    ]
+  },
+  "engagementMetrics": {
+    "totalMessagesExchanged": 16,
+    "engagementDurationSeconds": 0
+  },
+  "agentNotes": "Used urgency tactics; Employed threats; Banking/financial scam; Verification/authentication attempt; Requested sensitive information; Asked for credentials | Employed threats; Banking/financial scam; Verification/authentication attempt; Requested sensitive information; Asked for credentials | Used urgency tactics; Banking/financial scam; Requested sensitive information; Asked for credentials | Employed threats; Banking/financial scam; Shared suspicious links; Verification/authentication attempt; Requested sensitive information; Asked for credentials | Banking/financial scam; Requested sensitive information; Asked for credentials"
+}
     
     # Evaluate the final output
     score = evaluate_final_output(final_output, test_scenario, conversation_history)
@@ -237,3 +256,4 @@ def evaluate_final_output(final_output, scenario, conversation_history):
 # Run the test
 if __name__ == "__main__":
     test_honeypot_api()
+ 

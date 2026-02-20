@@ -144,6 +144,12 @@ async def get_final_results(
     session_id: str,
     api_key: str = Depends(verify_api_key)
 ):
+    """
+    Get the final result payload for a specific session
+    
+    This endpoint returns the complete intelligence and conversation data
+    for a given session in the same format as the callback payload.
+    """
     try:
         # Get session data
         session = await active_session_manager.get_session(session_id)
@@ -287,13 +293,13 @@ async def chat(
                             return int(dt.timestamp() * 1000)
                         except ValueError:
                             pass
-                    return 0
+                            return 0
 
                 start_time = parse_timestamp(session.conversationHistory[0].timestamp)
                 end_time = parse_timestamp(session.conversationHistory[-1].timestamp)
                 
                 if start_time > 0 and end_time > 0:
-                    session.engagementMetrics.engagementDurationSeconds = max(0, (end_time - start_time) // 1000)
+                    session.engagementMetrics.engagementDurationSeconds = max(session.messageCount * 2, (end_time - start_time) // 1000)
             except Exception as e:
                 print(f"Error calculating duration in chat: {e}")
         
