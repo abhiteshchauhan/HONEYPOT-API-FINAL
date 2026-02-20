@@ -56,7 +56,6 @@ class MessageResponse(BaseModel):
     scamType: Optional[str] = Field(None, description="Human-readable scam type label")
     scamCategories: Optional[List[str]] = Field(None, description="Detected scam categories")
     confidenceScore: Optional[float] = Field(None, description="Scam detection confidence 0-1")
-    totalMessagesExchanged: Optional[int] = Field(None, description="Total messages so far")
     extractedIntelligence: Optional[Any] = Field(None, description="Intelligence extracted so far")
     agentNotes: Optional[str] = Field(None, description="Agent notes summary")
     engagementMetrics: Optional[Any] = Field(None, description="Engagement metrics")
@@ -89,8 +88,8 @@ class ExtractedIntelligence(BaseModel):
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
 
 class EngagementMetrics(BaseModel):
-    totalMessagesExchanged: int = Field(default =0, description="Total messages in conversation")
-    engagementDurationSeconds: int =Field(default =0, description="Engagement duration in seconds")
+    totalMessagesExchanged: int = Field(default=0, description="Total messages in conversation")
+    engagementDurationSeconds: int = Field(default=0, description="Engagement duration in seconds")
 
 
 class FinalResultPayload(BaseModel):
@@ -100,7 +99,6 @@ class FinalResultPayload(BaseModel):
     scamType: str = Field(default="Unknown", description="Human-readable scam type label")
     scamCategories: List[str] = Field(default_factory=list, description="Detected scam categories")
     confidenceScore: float = Field(default=0.0, description="Scam detection confidence 0-1")
-    totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
     extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
     agentNotes: str = Field(..., description="Summary of scammer behavior")
     engagementMetrics: EngagementMetrics = Field(..., description="Engagement metrics")

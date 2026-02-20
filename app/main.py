@@ -167,7 +167,6 @@ async def get_final_results(
             scamType=session.scamType,
             scamCategories=session.scamCategories,
             confidenceScore=session.confidenceScore,
-            totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
             engagementMetrics={
@@ -176,13 +175,9 @@ async def get_final_results(
             }
         )
     
-        return {
-            "status": "success", 
-            "sessionId": session.sessionId, 
-            "data": payload.model_dump(),
-            "callbackSent": session.callbackSent,
-            "conversationHistory": [msg.model_dump() for msg in session.conversationHistory]
-        }
+        result = {"status": "success"}
+        result.update(payload.model_dump())
+        return result
     
     except HTTPException:
         raise
@@ -367,7 +362,6 @@ async def chat(
             except Exception as e:
                 print(f"Error calculating duration in chat: {e}")
         
-        session.engagementMetrics.totalMessagesExchanged = session.messageCount
         await active_session_manager.save_session(session)
         
         # Check if we should send callback
@@ -410,11 +404,10 @@ async def chat(
             scamType=session.scamType,
             scamCategories=session.scamCategories,
             confidenceScore=session.confidenceScore,
-            totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence.model_dump(),
             agentNotes=session.agentNotes or None,
             engagementMetrics={
-                "totalMessagesExchanged": session.engagementMetrics.totalMessagesExchanged,
+                "totalMessagesExchanged": session.messageCount,
                 "engagementDurationSeconds": session.engagementMetrics.engagementDurationSeconds
             }
         )
