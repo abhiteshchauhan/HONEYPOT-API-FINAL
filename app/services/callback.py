@@ -42,12 +42,13 @@ class CallbackService:
         payload = FinalResultPayload(
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
+            scamCategories=session.scamCategories,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Scam engagement completed",
             engagementMetrics={
                 "totalMessagesExchanged": session.messageCount,
-                "engagementDurationSeconds": session.engagementDurationSeconds
+                "engagementDurationSeconds": session.engagementMetrics.engagementDurationSeconds
             }
         )
         

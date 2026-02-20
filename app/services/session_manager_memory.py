@@ -33,6 +33,7 @@ class InMemorySessionManager:
             conversationHistory=[],
             messageCount=0,
             scamDetected=False,
+            scamCategories=[],
             extractedIntelligence=ExtractedIntelligence(),
             agentNotes="",
             engagementMetrics=EngagementMetrics(),
@@ -55,7 +56,8 @@ class InMemorySessionManager:
         new_message: Message,
         scam_detected: bool = False,
         intelligence: Optional[ExtractedIntelligence] = None,
-        notes: str = ""
+        notes: str = "",
+        categories: list = []
     ) -> SessionData:
         """Update session with new message and data"""
         session = await self.get_session(session_id)
@@ -67,6 +69,11 @@ class InMemorySessionManager:
         
         if scam_detected:
             session.scamDetected = True
+        
+        # Update scam categories (merge unique)
+        for cat in categories:
+            if cat not in session.scamCategories:
+                session.scamCategories.append(cat)
         
         if intelligence:
             session.extractedIntelligence = intelligence

@@ -79,6 +79,7 @@ class FinalResultPayload(BaseModel):
     """Payload sent to GUVI callback endpoint"""
     sessionId: str = Field(..., description="Session identifier")
     scamDetected: bool = Field(..., description="Whether scam was confirmed")
+    scamCategories: List[str] = Field(default_factory=list, description="Detected scam categories")
     totalMessagesExchanged: int = Field(..., description="Total messages in conversation")
     extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
     agentNotes: str = Field(..., description="Summary of scammer behavior")
@@ -120,7 +121,7 @@ class SessionData(BaseModel):
     conversationHistory: List[Message] = Field(default_factory=list)
     messageCount: int = Field(default=0)
     scamDetected: bool = Field(default=False)
-    engagementDurationSeconds: int = Field(default=0, description="Engagement duration in seconds")
+    scamCategories: List[str] = Field(default_factory=list, description="Detected scam categories")
     extractedIntelligence: ExtractedIntelligence = Field(default_factory=ExtractedIntelligence)
     agentNotes: str = Field(default="")
     engagementMetrics: EngagementMetrics = Field(default_factory=EngagementMetrics)

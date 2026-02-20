@@ -5,7 +5,7 @@ import json
 import time
 from typing import Optional
 from redis import asyncio as aioredis
-from app.models import SessionData, Message, ExtractedIntelligence
+from app.models import SessionData, Message, ExtractedIntelligence, EngagementMetrics
 from app.config import config
 
 
@@ -86,8 +86,10 @@ class SessionManager:
             conversationHistory=[],
             messageCount=0,
             scamDetected=False,
+            scamCategories=[],
             extractedIntelligence=ExtractedIntelligence(),
             agentNotes="",
+            engagementMetrics=EngagementMetrics(),
             callbackSent=False,
             createdAt=now,
             updatedAt=now
@@ -123,7 +125,8 @@ class SessionManager:
         new_message: Message,
         scam_detected: bool = False,
         intelligence: Optional[ExtractedIntelligence] = None,
-        notes: str = ""
+        notes: str = "",
+        categories: list = []
     ) -> SessionData:
         """
         Update session with new message and data
@@ -150,6 +153,11 @@ class SessionManager:
         # Update scam detection status
         if scam_detected:
             session.scamDetected = True
+        
+        # Update scam categories (merge unique)
+        for cat in categories:
+            if cat not in session.scamCategories:
+                session.scamCategories.append(cat)
         
         # Update intelligence if provided
         if intelligence:

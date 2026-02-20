@@ -164,12 +164,13 @@ async def get_final_results(
         payload = FinalResultPayload(
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
+            scamCategories=session.scamCategories,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
             engagementMetrics={
                 "totalMessagesExchanged": session.messageCount,
-                "engagementDurationSeconds": duration_seconds
+                "engagementDurationSeconds": session.engagementMetrics.engagementDurationSeconds
             }
         )
     
@@ -192,6 +193,57 @@ async def get_final_results(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving session results: {str(e)}"
         )
+
+@app.get("/sessions")
+async def list_sessions(
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    List all active sessions with basic stats
+    """
+    try:
+        if use_redis:
+            await session_manager.connect()
+            keys = await session_manager.redis.keys("session:*")
+            sessions_info = []
+            for key in keys:
+                session_id = key.replace("session:", "")
+                session = await active_session_manager.get_session(session_id)
+                if session:
+                    sessions_info.append({
+                        "sessionId": session.sessionId,
+                        "messageCount": session.messageCount,
+                        "scamDetected": session.scamDetected,
+                        "scamCategories": session.scamCategories,
+                        "callbackSent": session.callbackSent,
+                        "createdAt": session.createdAt,
+                        "updatedAt": session.updatedAt
+                    })
+        else:
+            sessions_info = [
+                {
+                    "sessionId": s.sessionId,
+                    "messageCount": s.messageCount,
+                    "scamDetected": s.scamDetected,
+                    "scamCategories": s.scamCategories,
+                    "callbackSent": s.callbackSent,
+                    "createdAt": s.createdAt,
+                    "updatedAt": s.updatedAt
+                }
+                for s in inmemory_session_manager.sessions.values()
+            ]
+        
+        return {
+            "status": "success",
+            "totalSessions": len(sessions_info),
+            "sessions": sessions_info
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error listing sessions: {str(e)}"
+        )
+
 
 @app.post("/chat", response_model=MessageResponse)
 async def chat(
@@ -220,6 +272,11 @@ async def chat(
 
         if not session:
             session = await active_session_manager.create_session(request.sessionId)
+            # Option E: Initialize with client's conversation history on first message
+            if request.conversationHistory:
+                session.conversationHistory = list(request.conversationHistory)
+                session.messageCount = len(session.conversationHistory)
+                await active_session_manager.save_session(session)
         
         # Detect scam
         detection_result = await detector.detect_scam(
@@ -274,10 +331,9 @@ async def chat(
             new_message=request.message,
             scam_detected=detection_result.is_scam,
             intelligence=intelligence,
-            notes=notes
+            notes=notes,
+            categories=detection_result.categories if detection_result.is_scam else []
         )
-        
-        print(f"DEBUG [{request.sessionId}]: After adding scammer msg - History: {len(session.conversationHistory)}, Count: {session.messageCount}")
         
         # Add user's response to session too
         session.conversationHistory.append(user_response)
@@ -306,8 +362,6 @@ async def chat(
         
         session.engagementMetrics.totalMessagesExchanged = session.messageCount
         await active_session_manager.save_session(session)
-        
-        print(f"DEBUG [{request.sessionId}]: After adding agent msg - History: {len(session.conversationHistory)}, Count: {session.messageCount}")
         
         # Check if we should send callback
         if detection_result.is_scam:
