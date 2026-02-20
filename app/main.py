@@ -340,27 +340,16 @@ async def chat(
         # Add user's response to session too
         session.conversationHistory.append(user_response)
         session.messageCount = len(session.conversationHistory)
-        if session.messageCount > 1:
-            try:
-                def parse_timestamp(ts):
-                    if isinstance(ts, (int, float)):
-                        return int(ts)
-                    if isinstance(ts, str):
-                        try:
-                            ts_clean = ts.replace('Z', '+00:00')
-                            dt = datetime.fromisoformat(ts_clean)
-                            return int(dt.timestamp() * 1000)
-                        except ValueError:
-                            pass
-                            return 0
-
-                start_time = parse_timestamp(session.conversationHistory[0].timestamp)
-                end_time = parse_timestamp(session.conversationHistory[-1].timestamp)
-                
-                if start_time > 0 and end_time > 0:
-                    session.engagementMetrics.engagementDurationSeconds = max(session.messageCount * 2, (end_time - start_time) // 1000)
-            except Exception as e:
-                print(f"Error calculating duration in chat: {e}")
+        
+        # Calculate engagement duration using session creation time vs now
+        try:
+            now_ms = int(time.time() * 1000)
+            start_ms = session.createdAt or now_ms
+            duration_seconds = max(0, (now_ms - start_ms) // 1000)
+            # Ensure at least messageCount * 3 seconds as a floor (realistic minimum)
+            session.engagementMetrics.engagementDurationSeconds = max(duration_seconds, session.messageCount * 3)
+        except Exception as e:
+            print(f"Error calculating duration: {e}")
         
         await active_session_manager.save_session(session)
         
