@@ -51,7 +51,7 @@ def run_test():
         }
 
         try:
-            r = requests.post(f"{API_URL}/chat", json=payload, headers=HEADERS, timeout=30)
+            r = requests.post(f"{API_URL}/chat", json=payload, headers=HEADERS, timeout=60)
             if r.status_code == 200:
                 reply = r.json().get("reply", "")
                 print(f"[{i:02d}] Scammer: {msg[:70]}...")
@@ -79,72 +79,86 @@ def run_test():
     print("FINAL JSON PAYLOAD (/results)")
     print(f"{'='*60}\n")
 
-    try:
-        r = requests.get(f"{API_URL}/results/{session_id}", headers=HEADERS, timeout=15)
-        if r.status_code == 200:
-            result = r.json()
-            print(json.dumps(result, indent=2))
+    # Wait briefly for Vercel to finish processing last message
+    time.sleep(3)
 
-            print(f"\n{'='*60}")
-            print("SCORE ESTIMATE")
-            print(f"{'='*60}")
-            score = 0
-
-            # Scam Detection (20pts)
-            if result.get("scamDetected"):
-                print("[+20] scamDetected = True")
-                score += 20
+    result = None
+    for attempt in range(1, 4):
+        try:
+            print(f"Fetching /results (attempt {attempt}/3)...")
+            r = requests.get(f"{API_URL}/results/{session_id}", headers=HEADERS, timeout=60)
+            if r.status_code == 200:
+                result = r.json()
+                break
             else:
-                print("[ +0] scamDetected = False")
+                print(f"  Got {r.status_code}: {r.text}")
+        except Exception as e:
+            print(f"  Attempt {attempt} failed: {e}")
+        if attempt < 3:
+            time.sleep(5)
 
-            # Intelligence (40pts)
-            intel = result.get("extractedIntelligence", {})
-            fake_checks = {
-                "bankAccounts":  "1234567890123456",
-                "upiIds":        "scammer.fraud@fakebank",
-                "phoneNumbers":  "9876543210",
-                "phishingLinks": "sbi-secure-verify.com",
-            }
-            for field, value in fake_checks.items():
-                extracted = intel.get(field, [])
-                if any(value in str(v) for v in extracted):
-                    print(f"[+10] {field} extracted: {extracted}")
-                    score += 10
-                else:
-                    print(f"[ +0] {field} NOT found (got: {extracted})")
+    if result is None:
+        print("Could not fetch /results after 3 attempts.")
+        return
 
-            # Engagement Quality (20pts)
-            metrics = result.get("engagementMetrics", {})
-            duration = metrics.get("engagementDurationSeconds", 0)
-            messages = metrics.get("totalMessagesExchanged", 0)
-            if duration > 0:
-                print(f"[ +5] duration > 0  ({duration}s)")
-                score += 5
-            if duration > 60:
-                print(f"[ +5] duration > 60 ({duration}s)")
-                score += 5
-            if messages > 0:
-                print(f"[ +5] messages > 0  ({messages})")
-                score += 5
-            if messages >= 5:
-                print(f"[ +5] messages >= 5 ({messages})")
-                score += 5
+    print(json.dumps(result, indent=2))
 
-            # Response Structure (20pts)
-            for field in ["status", "scamDetected", "extractedIntelligence"]:
-                if field in result:
-                    print(f"[ +5] field present: {field}")
-                    score += 5
-            for field in ["engagementMetrics", "agentNotes"]:
-                if result.get(field):
-                    print(f"[+2.5] field present: {field}")
-                    score += 2.5
+    print(f"\n{'='*60}")
+    print("SCORE ESTIMATE")
+    print(f"{'='*60}")
+    score = 0
 
-            print(f"\nESTIMATED SCORE: {score}/100")
+    # Scam Detection (20pts)
+    if result.get("scamDetected"):
+        print("[+20] scamDetected = True")
+        score += 20
+    else:
+        print("[ +0] scamDetected = False")
+
+    # Intelligence (40pts)
+    intel = result.get("extractedIntelligence", {})
+    fake_checks = {
+        "bankAccounts":  "1234567890123456",
+        "upiIds":        "scammer.fraud@fakebank",
+        "phoneNumbers":  "9876543210",
+        "phishingLinks": "sbi-secure-verify.com",
+    }
+    for field, value in fake_checks.items():
+        extracted = intel.get(field, [])
+        if any(value in str(v) for v in extracted):
+            print(f"[+10] {field} extracted: {extracted}")
+            score += 10
         else:
-            print(f"ERROR {r.status_code}: {r.text}")
-    except Exception as e:
-        print(f"Failed to fetch results: {e}")
+            print(f"[ +0] {field} NOT found (got: {extracted})")
+
+    # Engagement Quality (20pts)
+    metrics = result.get("engagementMetrics", {})
+    duration = metrics.get("engagementDurationSeconds", 0)
+    messages = metrics.get("totalMessagesExchanged", 0)
+    if duration > 0:
+        print(f"[ +5] duration > 0  ({duration}s)")
+        score += 5
+    if duration > 60:
+        print(f"[ +5] duration > 60 ({duration}s)")
+        score += 5
+    if messages > 0:
+        print(f"[ +5] messages > 0  ({messages})")
+        score += 5
+    if messages >= 5:
+        print(f"[ +5] messages >= 5 ({messages})")
+        score += 5
+
+    # Response Structure (20pts)
+    for field in ["status", "scamDetected", "extractedIntelligence"]:
+        if field in result:
+            print(f"[ +5] field present: {field}")
+            score += 5
+    for field in ["engagementMetrics", "agentNotes"]:
+        if result.get(field):
+            print(f"[+2.5] field present: {field}")
+            score += 2.5
+
+    print(f"\nESTIMATED SCORE: {score}/100")
 
 
 if __name__ == "__main__":
