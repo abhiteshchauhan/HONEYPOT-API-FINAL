@@ -164,7 +164,9 @@ async def get_final_results(
         payload = FinalResultPayload(
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
+            scamType=session.scamType,
             scamCategories=session.scamCategories,
+            confidenceScore=session.confidenceScore,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
@@ -325,6 +327,9 @@ async def chat(
             timestamp=int(time.time() * 1000)
         )
         
+        # Resolve human-readable scam type from categories
+        resolved_scam_type = ScamDetector.resolve_scam_type(detection_result.categories) if detection_result.is_scam else "Unknown"
+        
         # Update session
         session = await active_session_manager.update_session(
             session_id=request.sessionId,
@@ -332,7 +337,9 @@ async def chat(
             scam_detected=detection_result.is_scam,
             intelligence=intelligence,
             notes=notes,
-            categories=detection_result.categories if detection_result.is_scam else []
+            categories=detection_result.categories if detection_result.is_scam else [],
+            confidence=detection_result.confidence if detection_result.is_scam else 0.0,
+            scam_type=resolved_scam_type
         )
         
         # Add user's response to session too

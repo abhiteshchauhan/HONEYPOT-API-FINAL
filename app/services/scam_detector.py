@@ -39,6 +39,28 @@ class ScamDetector:
         "refund", "congratulations", "selected"
     }
     
+    # Priority-ordered mapping from raw categories to human-readable scam type
+    SCAM_TYPE_MAP = [
+        ("banking",              "Bank Fraud"),
+        ("sensitive_info_request", "Credential Theft"),
+        ("phishing_link",        "Phishing"),
+        ("reward",               "Lottery / Reward Scam"),
+        ("threat",               "Impersonation / Threat Scam"),
+        ("verification",         "KYC / Verification Scam"),
+        ("urgency",              "Urgency Scam"),
+    ]
+
+    @classmethod
+    def resolve_scam_type(cls, categories: List[str]) -> str:
+        """
+        Map raw detection categories to a single human-readable scam type label.
+        Returns the first matching type in priority order.
+        """
+        for key, label in cls.SCAM_TYPE_MAP:
+            if key in categories:
+                return label
+        return "Unknown Scam" if categories else "Unknown"
+
     def __init__(self):
         self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY)
     

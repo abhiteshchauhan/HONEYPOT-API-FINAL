@@ -57,7 +57,9 @@ class InMemorySessionManager:
         scam_detected: bool = False,
         intelligence: Optional[ExtractedIntelligence] = None,
         notes: str = "",
-        categories: list = []
+        categories: list = [],
+        confidence: float = 0.0,
+        scam_type: str = "Unknown"
     ) -> SessionData:
         """Update session with new message and data"""
         session = await self.get_session(session_id)
@@ -74,6 +76,14 @@ class InMemorySessionManager:
         for cat in categories:
             if cat not in session.scamCategories:
                 session.scamCategories.append(cat)
+        
+        # Keep highest confidence seen across all messages
+        if confidence > session.confidenceScore:
+            session.confidenceScore = round(confidence, 4)
+        
+        # Update scam type if we have a real one
+        if scam_type and scam_type not in ("Unknown", ""):
+            session.scamType = scam_type
         
         if intelligence:
             session.extractedIntelligence = intelligence
