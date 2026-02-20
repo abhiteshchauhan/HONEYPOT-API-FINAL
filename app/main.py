@@ -145,6 +145,7 @@ async def get_final_results(
     api_key: str = Depends(verify_api_key)
 ):
     try:
+        # Get session data
         session = await active_session_manager.get_session(session_id)
         
         if not session:
@@ -160,7 +161,10 @@ async def get_final_results(
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
-            engagementMetrics=session.engagementMetrics 
+            engagementMetrics={
+                "totalMessagesExchanged": session.messageCount,
+                "engagementDurationSeconds": duration_seconds
+            }
         )
     
         return {
