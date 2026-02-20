@@ -174,7 +174,8 @@ async def get_final_results(
         )
     
         return {
-            "status": "success",  
+            "status": "success", 
+            "sessionId": session.sessionId, 
             "data": payload.model_dump(),
             "callbackSent": session.callbackSent,
             "conversationHistory": [msg.model_dump() for msg in session.conversationHistory]

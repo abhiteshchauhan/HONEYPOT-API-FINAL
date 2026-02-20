@@ -1,11 +1,11 @@
 """
 Pydantic models for request/response validation
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any ,Union
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Union
-from pydantic import BaseModel
+
+
 
 class Message(BaseModel):
     """Individual message structure"""
