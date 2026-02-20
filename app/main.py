@@ -167,6 +167,7 @@ async def get_final_results(
             scamType=session.scamType,
             scamCategories=session.scamCategories,
             confidenceScore=session.confidenceScore,
+            totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
             engagementMetrics={
@@ -353,22 +354,16 @@ async def chat(
         
         await active_session_manager.save_session(session)
         
-        # Check if we should send callback
-        if detection_result.is_scam:
-            # Get fresh session with updated message count
+        # Send callback whenever scam is detected and not already sent
+        if detection_result.is_scam and not session.callbackSent:
             updated_session = await active_session_manager.get_session(request.sessionId)
-            should_callback = await active_session_manager.should_send_callback(request.sessionId)
-            
-            if should_callback:
-                print(f"Session {request.sessionId}: Triggering callback (messages: {updated_session.messageCount})")
-                
-                # Send callback with updated session that includes agent response
-                callback_result = await callback_service.send_if_criteria_met(updated_session)
-                
+            if updated_session and not updated_session.callbackSent:
+                print(f"Session {request.sessionId}: Sending callback (messages: {updated_session.messageCount})")
+                callback_result = await callback_service.send_final_result(updated_session)
                 if callback_result:
                     await active_session_manager.mark_callback_sent(request.sessionId)
                     print(f"[OK] Callback sent for session {request.sessionId}")
-                elif callback_result is False:
+                else:
                     print(f"[ERROR] Callback failed for session {request.sessionId}")
         
         # Log intelligence status

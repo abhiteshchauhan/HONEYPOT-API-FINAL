@@ -29,12 +29,12 @@ class Config:
         "GUVI_CALLBACK_URL",
         "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
     )
-    CALLBACK_TIMEOUT: int = int(os.getenv("CALLBACK_TIMEOUT", "5"))
+    CALLBACK_TIMEOUT: int = int(os.getenv("CALLBACK_TIMEOUT", "30"))
     CALLBACK_MAX_RETRIES: int = int(os.getenv("CALLBACK_MAX_RETRIES", "3"))
     
     # Agent Behavior Configuration
-    MIN_MESSAGES_FOR_CALLBACK: int = int(os.getenv("MIN_MESSAGES_FOR_CALLBACK", "5"))
-    MIN_INTELLIGENCE_ITEMS: int = int(os.getenv("MIN_INTELLIGENCE_ITEMS", "2"))
+    MIN_MESSAGES_FOR_CALLBACK: int = int(os.getenv("MIN_MESSAGES_FOR_CALLBACK", "1"))
+    MIN_INTELLIGENCE_ITEMS: int = int(os.getenv("MIN_INTELLIGENCE_ITEMS", "1"))
     
     # Scam Detection Configuration
     SCAM_DETECTION_CONFIDENCE_THRESHOLD: float = float(

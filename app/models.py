@@ -83,6 +83,7 @@ class FinalResultPayload(BaseModel):
     scamType: str = Field(default="Unknown", description="Human-readable scam type label")
     scamCategories: List[str] = Field(default_factory=list, description="Detected scam categories")
     confidenceScore: float = Field(default=0.0, description="Scam detection confidence 0-1")
+    totalMessagesExchanged: int = Field(default=0, description="Total messages - required by GUVI at top level")
     extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
     agentNotes: str = Field(..., description="Summary of scammer behavior")
     engagementMetrics: EngagementMetrics = Field(..., description="Engagement metrics")
