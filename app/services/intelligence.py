@@ -26,6 +26,24 @@ class IntelligenceExtractor:
     # 5. BANK ACCOUNT: 
     # 11-18 digits. We rely on length and context in the logic to separate this from phones.
     BANK_ACCOUNT_PATTERN = re.compile(r'(?<!\d)\(?\d{11,18}\)?(?!\d)')
+
+    # 6. CASE ID / REFERENCE ID: e.g. CASE123456, REF-789, TKT/001 - must have digits in ID part
+    CASE_ID_PATTERN = re.compile(
+        r'\b(?:case|ref|reference|ticket|complaint|cmp|sr|incident)[\s#:/-]?[A-Z0-9]*\d[A-Z0-9]{2,14}\b',
+        re.IGNORECASE
+    )
+
+    # 7. POLICY NUMBER: e.g. POL123456, POLICY/2024/001, LIC-987654
+    POLICY_NUMBER_PATTERN = re.compile(
+        r'\b(?:policy|pol|lic|insurance)[\s#:/-]?[A-Z0-9]{4,15}\b',
+        re.IGNORECASE
+    )
+
+    # 8. ORDER / TRANSACTION ID: e.g. ORD123456, TXN-789, ORDER#001
+    ORDER_NUMBER_PATTERN = re.compile(
+        r'\b(?:order|ord|txn|transaction|shipment|delivery|parcel)[\s#:/-]?[A-Z0-9]{4,15}\b',
+        re.IGNORECASE
+    )
     
     # Suspicious keywords to track
     SUSPICIOUS_KEYWORDS = {
@@ -106,6 +124,24 @@ class IntelligenceExtractor:
             if url not in self.extracted.phishingLinks:
                 self.extracted.phishingLinks.append(url)
         
+        # Extract case/reference IDs
+        case_ids = self.CASE_ID_PATTERN.findall(text)
+        for case_id in case_ids:
+            if case_id not in self.extracted.caseIds:
+                self.extracted.caseIds.append(case_id)
+
+        # Extract policy numbers
+        policy_nums = self.POLICY_NUMBER_PATTERN.findall(text)
+        for policy in policy_nums:
+            if policy not in self.extracted.policyNumbers:
+                self.extracted.policyNumbers.append(policy)
+
+        # Extract order/transaction numbers
+        order_nums = self.ORDER_NUMBER_PATTERN.findall(text)
+        for order in order_nums:
+            if order not in self.extracted.orderNumbers:
+                self.extracted.orderNumbers.append(order)
+
         # Extract suspicious keywords
         for keyword in self.SUSPICIOUS_KEYWORDS:
             if keyword in text_lower:
@@ -206,7 +242,22 @@ class IntelligenceExtractor:
         for email in other.emailAddresses:
             if email not in self.extracted.emailAddresses:
                 self.extracted.emailAddresses.append(email)
-        
+
+        # Merge case IDs
+        for case_id in other.caseIds:
+            if case_id not in self.extracted.caseIds:
+                self.extracted.caseIds.append(case_id)
+
+        # Merge policy numbers
+        for policy in other.policyNumbers:
+            if policy not in self.extracted.policyNumbers:
+                self.extracted.policyNumbers.append(policy)
+
+        # Merge order numbers
+        for order in other.orderNumbers:
+            if order not in self.extracted.orderNumbers:
+                self.extracted.orderNumbers.append(order)
+
         # Merge keywords
         for keyword in other.suspiciousKeywords:
             if keyword not in self.extracted.suspiciousKeywords:

@@ -165,8 +165,7 @@ async def get_final_results(
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
             scamType=session.scamType,
-            scamCategories=session.scamCategories,
-            confidenceScore=session.confidenceScore,
+            confidenceLevel=session.confidenceScore,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Session data retrieved",
@@ -300,19 +299,17 @@ async def chat(
         
         intelligence = extractor.get_extracted_intelligence()
         
-        # Generate response based on scam detection
-        if detection_result.is_scam:
-            # Scam detected - engage AI agent
+        # Generate response - engage agent if scam detected now OR session already flagged as scam
+        is_scam_context = detection_result.is_scam or session.scamDetected
+        if is_scam_context:
+            categories = detection_result.categories if detection_result.is_scam else session.scamCategories
             response_text, agent_notes = await agent.generate_context_aware_response(
                 request.message,
                 request.conversationHistory,
-                detection_result.categories
+                categories
             )
-            
-            # Use concise agent notes only
             notes = agent_notes
         else:
-            # Not a scam - give neutral response
             response_text = "I'm not sure what this is about. Can you clarify?"
             notes = "No scam detected"
         
@@ -341,7 +338,57 @@ async def chat(
         # Add user's response to session too
         session.conversationHistory.append(user_response)
         session.messageCount = len(session.conversationHistory)
-        
+
+        # Track conversation quality metrics
+        if is_scam_context:
+            cq = session.conversationQuality
+            cq.turnCount += 1
+
+            resp_lower = response_text.lower()
+
+            # Count questions asked (any sentence ending with ?)
+            cq.questionsAsked += response_text.count("?")
+
+            # Relevant/investigative questions - probe for identity, company, address, website
+            investigative_keywords = [
+                "which bank", "which company", "which branch", "employee id",
+                "your name", "your address", "your website", "official website",
+                "reference number", "case id", "policy number", "order id",
+                "upi id", "account number", "phone number", "contact number",
+                "who are you", "where are you", "what is your",
+                "which account", "which sbi", "which hdfc", "which branch",
+                "real sbi", "real link", "official link", "real website",
+                "your upi", "your number", "your email", "your id",
+                "confirm it", "how do i verify", "how to verify",
+                "which officer", "officer name", "employee name"
+            ]
+            if any(kw in resp_lower for kw in investigative_keywords):
+                cq.relevantQuestions += 1
+
+            # Red flags identified - urgency, OTP, fees, suspicious links
+            red_flag_keywords = [
+                "otp", "urgent", "blocked", "suspended", "fee", "fine",
+                "penalty", "suspicious", "fake", "fraud", "scam", "verify",
+                "link", "http", "upi", "transfer", "payment"
+            ]
+            flags_in_scammer_msg = sum(
+                1 for kw in red_flag_keywords if kw in request.message.text.lower()
+            )
+            cq.redFlagsIdentified += min(flags_in_scammer_msg, 3)
+
+            # Information elicitation attempts - agent asking for specific data
+            elicitation_keywords = [
+                "send me", "can you send", "what is the upi", "what's the upi",
+                "which upi", "send the link", "what link", "which link",
+                "what number", "call number", "account number", "bank account",
+                "your id", "employee id", "case number", "policy", "order",
+                "upi id", "upi?", "link?", "number?", "which bank",
+                "how much", "where do i", "where should i", "who will",
+                "confirm", "received", "official", "real link", "real site"
+            ]
+            if any(kw in resp_lower for kw in elicitation_keywords):
+                cq.informationElicitation += 1
+
         # Calculate engagement duration using real wall-clock time from session creation
         try:
             now_ms = int(time.time() * 1000)

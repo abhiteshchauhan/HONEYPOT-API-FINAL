@@ -68,11 +68,22 @@ class ExtractedIntelligence(BaseModel):
     upiIds: List[str] = Field(default_factory=list, description="Extracted UPI IDs")
     phishingLinks: List[str] = Field(default_factory=list, description="Extracted URLs/links")
     emailAddresses: List[str] = Field(default_factory=list, description="Extracted email addresses")
+    caseIds: List[str] = Field(default_factory=list, description="Extracted case/reference IDs")
+    policyNumbers: List[str] = Field(default_factory=list, description="Extracted policy numbers")
+    orderNumbers: List[str] = Field(default_factory=list, description="Extracted order/transaction IDs")
     suspiciousKeywords: List[str] = Field(default_factory=list, description="Detected scam keywords")
 
 class EngagementMetrics(BaseModel):
     totalMessagesExchanged: int = Field(default=0, description="Total messages in conversation")
     engagementDurationSeconds: int = Field(default=0, description="Engagement duration in seconds")
+
+
+class ConversationQuality(BaseModel):
+    turnCount: int = Field(default=0, description="Number of conversation turns")
+    questionsAsked: int = Field(default=0, description="Number of questions asked by agent")
+    relevantQuestions: int = Field(default=0, description="Number of investigative questions")
+    redFlagsIdentified: int = Field(default=0, description="Number of red flags identified")
+    informationElicitation: int = Field(default=0, description="Number of elicitation attempts")
 
 
 class FinalResultPayload(BaseModel):
@@ -81,8 +92,7 @@ class FinalResultPayload(BaseModel):
     sessionId: str = Field(..., description="Session identifier")
     scamDetected: bool = Field(..., description="Whether scam was confirmed")
     scamType: str = Field(default="Unknown", description="Human-readable scam type label")
-    scamCategories: List[str] = Field(default_factory=list, description="Detected scam categories")
-    confidenceScore: float = Field(default=0.0, description="Scam detection confidence 0-1")
+    confidenceLevel: float = Field(default=0.0, description="Confidence level of scam detection 0-1")
     totalMessagesExchanged: int = Field(default=0, description="Total messages - required by GUVI at top level")
     extractedIntelligence: ExtractedIntelligence = Field(..., description="All extracted intelligence")
     agentNotes: str = Field(..., description="Summary of scammer behavior")
@@ -130,6 +140,7 @@ class SessionData(BaseModel):
     extractedIntelligence: ExtractedIntelligence = Field(default_factory=ExtractedIntelligence)
     agentNotes: str = Field(default="")
     engagementMetrics: EngagementMetrics = Field(default_factory=EngagementMetrics)
+    conversationQuality: ConversationQuality = Field(default_factory=ConversationQuality)
     callbackSent: bool = Field(default=False)
     createdAt: Optional[int] = Field(default=None)
     updatedAt: Optional[int] = Field(default=None)

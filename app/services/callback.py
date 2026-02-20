@@ -43,7 +43,7 @@ class CallbackService:
             sessionId=session.sessionId,
             scamDetected=session.scamDetected,
             scamType=session.scamType,
-            confidenceScore=session.confidenceScore,
+            confidenceLevel=session.confidenceScore,
             totalMessagesExchanged=session.messageCount,
             extractedIntelligence=session.extractedIntelligence,
             agentNotes=session.agentNotes or "Scam engagement completed",
