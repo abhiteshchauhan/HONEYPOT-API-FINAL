@@ -36,15 +36,7 @@ class CallbackService:
             print(f"Callback already sent for session {session.sessionId}")
             return True
         
-        duration_seconds = 0
-        
-        if session.conversationHistory and len(session.conversationHistory) > 0:
-            try:
-                start_time = int(session.conversationHistory[0].timestamp)
-                end_time = int(session.conversationHistory[-1].timestamp)
-                duration_seconds = max(0, (end_time - start_time) // 1000)
-            except (ValueError, TypeError, AttributeError):
-                pass
+       
         
         # Build payload
         payload = FinalResultPayload(
